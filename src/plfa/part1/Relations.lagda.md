@@ -246,13 +246,13 @@ partial order but not a total order.
 Give an example of a preorder that is not a partial order.
 
 ```
--- Your code goes here
+-- Less-than ordering based on absolute value
 ```
 
 Give an example of a partial order that is not a total order.
 
 ```
--- Your code goes here
+-- Subset relation
 ```
 
 ## Reflexivity
@@ -365,7 +365,9 @@ The above proof omits cases where one argument is `z≤n` and one
 argument is `s≤s`.  Why is it ok to omit them?
 
 ```
--- Your code goes here
+-- Because if one of the argument is `s≤s`, then both
+-- `m` and `n` have `suc ?` form, which means you cannot
+-- have `z≤n` as the other argument.
 ```
 
 
@@ -555,7 +557,28 @@ transitivity proves `m + p ≤ n + q`, as was to be shown.
 Show that multiplication is monotonic with regard to inequality.
 
 ```
--- Your code goes here
+open Data.Nat using (_*_)
+open Data.Nat.Properties using (*-comm)
+
+*-monoʳ-≤ : ∀ (n p q : ℕ)
+  → p ≤ q
+    -------------
+  → n * p ≤ n * q
+*-monoʳ-≤ zero p q p≤q = z≤n
+*-monoʳ-≤ (suc n) p q p≤q = +-mono-≤ p q (n * p) (n * q) p≤q (*-monoʳ-≤ n p q p≤q)
+
+*-monoˡ-≤ : ∀ (m n p : ℕ)
+  → m ≤ n
+    -------------
+  → m * p ≤ n * p
+*-monoˡ-≤ m n p m≤n rewrite *-comm m p | *-comm n p = *-monoʳ-≤ p m n m≤n
+
+*-mono-≤ : ∀ (m n p q : ℕ)
+  → m ≤ n
+  → p ≤ q
+    -------------
+  → m * p ≤ n * q
+*-mono-≤ m n p q m≤n p≤q = ≤-trans (*-monoˡ-≤ m n p m≤n) (*-monoʳ-≤ n p q p≤q)
 ```
 
 
@@ -602,7 +625,13 @@ exploiting the corresponding properties of inequality.
 Show that strict inequality is transitive.
 
 ```
--- Your code goes here
+<-trans : ∀ {m n p : ℕ}
+  → m < n
+  → n < p
+    -------
+  → m < p
+<-trans z<s (s<s n<p) = z<s
+<-trans (s<s m<n) (s<s n<p) = s<s (<-trans m<n n<p)
 ```
 
 #### Exercise `trichotomy` (practice) {name=trichotomy}
@@ -620,7 +649,19 @@ similar to that used for totality.
 [negation](/Negation/).)
 
 ```
--- Your code goes here
+data Trichotomy (m n : ℕ) : Set where
+  less-than : m < n -> Trichotomy m n
+  equal-to : m ≡ n -> Trichotomy m n
+  greater-than : n < m -> Trichotomy m n
+
+<-trichotomy : ∀ (m n : ℕ) → Trichotomy m n
+<-trichotomy zero zero = equal-to refl
+<-trichotomy zero (suc n) = less-than z<s
+<-trichotomy (suc m) zero = greater-than z<s
+<-trichotomy (suc m) (suc n) with <-trichotomy m n
+...                             | less-than    m<n = less-than (s<s m<n)
+...                             | equal-to     m≡n = equal-to (cong suc m≡n)
+...                             | greater-than n<m = greater-than (s<s n<m)
 ```
 
 #### Exercise `+-mono-<` (practice) {name=plus-mono-less}
@@ -629,7 +670,25 @@ Show that addition is monotonic with respect to strict inequality.
 As with inequality, some additional definitions may be required.
 
 ```
--- Your code goes here
++-monoʳ-< : ∀ (n p q : ℕ)
+  → p < q
+    ---------------
+  → n + p < n + q
++-monoʳ-< zero p q p<q = p<q
++-monoʳ-< (suc n) p q p<q = s<s (+-monoʳ-< n p q p<q)
+
++-monoˡ-< : ∀ (m n p : ℕ)
+  → m < n
+    ---------------
+  → m + p < n + p
++-monoˡ-< m n p m<n rewrite +-comm m p | +-comm n p = +-monoʳ-< p m n m<n
+
++-mono-< : ∀ (m n p q : ℕ)
+  → m < n
+  → p < q
+    ---------------
+  → m + p < n + q
++-mono-< m n p q m<n p<q = <-trans (+-monoˡ-< m n p m<n) (+-monoʳ-< n p q p<q)
 ```
 
 #### Exercise `≤-iff-<` (recommended) {name=leq-iff-less}
@@ -637,7 +696,13 @@ As with inequality, some additional definitions may be required.
 Show that `suc m ≤ n` implies `m < n`, and conversely.
 
 ```
--- Your code goes here
+≤-if-< : ∀ {m n : ℕ} → suc m ≤ n → m < n
+≤-if-< {zero} (s≤s 0≤n) = z<s
+≤-if-< {suc m} (s≤s suc[m]≤n) = s<s (≤-if-< suc[m]≤n)
+
+<-if-≤ : ∀ {m n : ℕ} → m < n → suc m ≤ n
+<-if-≤ {zero} z<s = s≤s z≤n
+<-if-≤ {suc m} (s<s m<n) = s≤s (<-if-≤ m<n)
 ```
 
 #### Exercise `<-trans-revisited` (practice) {name=less-trans-revisited}
@@ -647,7 +712,12 @@ using the relation between strict inequality and inequality and
 the fact that inequality is transitive.
 
 ```
--- Your code goes here
+<-trans-revisited : ∀ (m n p : ℕ)
+  → m < n
+  → n < p
+    -------
+  → m < p
+<-trans-revisited m n p m<n n<p = ≤-if-< (≤-trans (<-if-≤ m<n) (≤-trans (+-monoˡ-≤ 0 1 n z≤n) (<-if-≤ n<p)))
 ```
 
 
@@ -754,7 +824,21 @@ successor of the sum of two even numbers, which is even.
 Show that the sum of two odd numbers is even.
 
 ```
--- Your code goes here
+o+o≡e : ∀ {m n : ℕ}
+  → odd m
+  → odd n
+    --------------
+  → even (m + n)
+e+o≡o : ∀ {m n : ℕ}
+  → even m
+  → odd n
+    --------------
+  → odd (m + n)
+
+o+o≡e (suc em) on = suc (e+o≡o em on)
+
+e+o≡o zero on = on
+e+o≡o (suc om) on = suc (o+o≡e om on)
 ```
 
 #### Exercise `Bin-predicates` (stretch) {name=Bin-predicates}
@@ -807,7 +891,78 @@ properties of `One`. Also, you may need to prove that
 if `One b` then `1` is less or equal to the result of `from b`.)
 
 ```
--- Your code goes here
+open import Data.Nat.Properties using (+-suc)
+open import plfa.part1.Induction using (Bin; ⟨⟩; _O; _I; inc; from; to)
+
+data One : Bin → Set where
+  ⟨⟩I : One (⟨⟩ I)
+  _O : ∀ {b : Bin} → One b → One (b O)
+  _I : ∀ {b : Bin} → One b → One (b I)
+
+data Can : Bin → Set where
+  ⟨⟩O : Can (⟨⟩ O)
+  can : ∀ {b : Bin} → One b → Can b
+
+inc-preserve-One : ∀ {b : Bin}
+  → One b
+    -------
+  → One (inc b)
+inc-preserve-One ⟨⟩I = ⟨⟩I O
+inc-preserve-One (o O) = o I
+inc-preserve-One (o I) = (inc-preserve-One o) O
+
+inc-preserve-Can : ∀ {b : Bin}
+  → Can b
+    -------
+  → Can (inc b)
+inc-preserve-Can ⟨⟩O = can ⟨⟩I
+inc-preserve-Can (can o) = can (inc-preserve-One o)
+
+to-Can : ∀ (n : ℕ)
+    ------------
+  → Can (to n)
+to-Can zero = ⟨⟩O
+to-Can (suc n) = inc-preserve-Can (to-Can n)
+
+to[2*n]≡[to[n]]O : ∀ {n : ℕ}
+  → 0 < n
+  → to (2 * n) ≡ (to n) O
+to[2*n]≡[to[n]]O {suc n} z<s = helper n
+  where
+    helper : ∀ (n : ℕ)
+      → to (2 * suc n) ≡ (to (suc n)) O
+    helper zero = refl
+    helper (suc n) rewrite +-suc n (suc (n + 0)) | helper n = refl
+
+*-monoʳ-< : ∀ (n p q : ℕ)
+  → p < q
+    ---------------
+  → suc n * p < suc n * q
+*-monoʳ-< zero p q p<q rewrite +-identityʳ p | +-identityʳ q = p<q
+*-monoʳ-< (suc n) p q p<q = +-mono-< _ _ _ _ p<q (*-monoʳ-< n p q p<q)
+
+from-one-pos : ∀ {b : Bin}
+  → One b
+    ------------
+  → 0 < from b
+from-one-pos ⟨⟩I = z<s
+from-one-pos (o O) = *-monoʳ-< 1 0 _ (from-one-pos o)
+from-one-pos (o I) = z<s
+
+one-to-from-inv : ∀ {b : Bin}
+  → One b
+    -------------------
+  → One (to (from b))
+one-to-from-inv ⟨⟩I = ⟨⟩I
+one-to-from-inv {b O} (o O) rewrite to[2*n]≡[to[n]]O (from-one-pos o) = (one-to-from-inv o) O
+one-to-from-inv {b I} (o I) rewrite to[2*n]≡[to[n]]O (from-one-pos o) = (one-to-from-inv o) I
+
+can-to-from-inv : ∀ {b : Bin}
+  → Can b
+    -------------------
+  → Can (to (from b))
+can-to-from-inv ⟨⟩O = ⟨⟩O
+can-to-from-inv (can o) = can (one-to-from-inv o)
 ```
 
 ## Standard library
