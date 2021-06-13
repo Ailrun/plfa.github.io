@@ -81,7 +81,7 @@ successor of two; and so on.
 Write out `7` in longhand.
 
 ```
--- Your code goes here
+seven = suc (suc (suc (suc (suc (suc (suc zero))))))
 ```
 
 
@@ -430,7 +430,21 @@ other word for evidence, which we will use interchangeably, is _proof_.
 Compute `3 + 4`, writing out your reasoning as a chain of equations, using the equations for `+`.
 
 ```
--- Your code goes here
++-example : 3 + 4 ≡ 7
++-example =
+  begin
+    3 + 4
+  ≡⟨⟩
+    suc (2 + 4)
+  ≡⟨⟩
+    suc (suc (1 + 4))
+  ≡⟨⟩
+    suc (suc (suc (0 + 4)))
+  ≡⟨⟩
+    suc (suc (suc 4))
+  ≡⟨⟩
+    7
+  ∎
 ```
 
 
@@ -492,7 +506,20 @@ Compute `3 * 4`, writing out your reasoning as a chain of equations, using the e
 (You do not need to step through the evaluation of `+`.)
 
 ```
--- Your code goes here
+*-example =
+  begin
+    3 * 4
+  ≡⟨⟩    -- inductive case
+    4 + (2 * 4)
+  ≡⟨⟩    -- inductive case
+    4 + (4 + (1 * 4))
+  ≡⟨⟩    -- inductive case
+    4 + (4 + (4 + (0 * 4)))
+  ≡⟨⟩    -- base case
+    4 + (4 + (4 + 0))
+  ≡⟨⟩    -- simplify
+    12
+  ∎
 ```
 
 
@@ -506,7 +533,26 @@ Define exponentiation, which is given by the following equations:
 Check that `3 ^ 4` is `81`.
 
 ```
--- Your code goes here
+_^_ : ℕ → ℕ → ℕ
+m ^ zero    = suc zero
+m ^ (suc n) = m * (m ^ n)
+
+_ =
+  begin
+    3 ^ 4
+  ≡⟨⟩    -- inductive case
+    3 * (3 ^ 3)
+  ≡⟨⟩    -- inductive case
+    3 * (3 * (3 ^ 2))
+  ≡⟨⟩    -- inductive case
+    3 * (3 * (3 * (3 ^ 1)))
+  ≡⟨⟩    -- inductive case
+    3 * (3 * (3 * (3 * (3 ^ 0))))
+  ≡⟨⟩    -- base case
+    3 * (3 * (3 * (3 * 1)))
+  ≡⟨⟩    -- simplify
+    81
+  ∎
 ```
 
 
@@ -571,7 +617,31 @@ _ =
 Compute `5 ∸ 3` and `3 ∸ 5`, writing out your reasoning as a chain of equations.
 
 ```
--- Your code goes here
+∸-example₁ =
+  begin
+    5 ∸ 3
+  ≡⟨⟩
+    4 ∸ 2
+  ≡⟨⟩
+    3 ∸ 1
+  ≡⟨⟩
+    2 ∸ 0
+  ≡⟨⟩
+    2
+  ∎
+
+∸-example₂ =
+  begin
+    3 ∸ 5
+  ≡⟨⟩
+    2 ∸ 4
+  ≡⟨⟩
+    1 ∸ 3
+  ≡⟨⟩
+    0 ∸ 2
+  ≡⟨⟩
+    0
+  ∎
 ```
 
 
@@ -918,7 +988,34 @@ represents a positive natural, and represent zero by `⟨⟩ O`.
 Confirm that these both give the correct answer for zero through four.
 
 ```
--- Your code goes here
+inc : Bin → Bin
+inc ⟨⟩ = ⟨⟩ I
+inc (b O) = b I
+inc (b I) = (inc b) O
+
+_ = begin inc (⟨⟩ O) ≡⟨⟩ ⟨⟩ I ∎
+_ = begin inc (⟨⟩ I) ≡⟨⟩ ⟨⟩ I O ∎
+_ = begin inc (⟨⟩ I O) ≡⟨⟩ ⟨⟩ I I ∎
+_ = begin inc (⟨⟩ I I) ≡⟨⟩ ⟨⟩ I O O ∎
+
+to : ℕ → Bin
+to zero = ⟨⟩ O
+to (suc n) = inc (to n)
+
+from : Bin → ℕ
+from ⟨⟩ = zero
+from (b O) = suc (suc zero) * from b
+from (b I) = suc zero + suc (suc zero) * from b
+
+_ = begin to 0 ≡⟨⟩ (⟨⟩ O) ∎
+_ = begin to 1 ≡⟨⟩ (⟨⟩ I) ∎
+_ = begin to 2 ≡⟨⟩ (⟨⟩ I O) ∎
+_ = begin to 3 ≡⟨⟩ (⟨⟩ I I) ∎
+
+_ = begin from (⟨⟩ O) ≡⟨⟩ 0 ∎
+_ = begin from (⟨⟩ I) ≡⟨⟩ 1 ∎
+_ = begin from (⟨⟩ I O) ≡⟨⟩ 2 ∎
+_ = begin from (⟨⟩ I I) ≡⟨⟩ 3 ∎
 ```
 
 
