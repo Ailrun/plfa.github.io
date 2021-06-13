@@ -241,7 +241,17 @@ Show that `A ⇔ B` as defined [earlier](/Isomorphism/#iff)
 is isomorphic to `(A → B) × (B → A)`.
 
 ```
--- Your code goes here
+open import plfa.part1.Isomorphism using (_⇔_)
+open _⇔_
+
+⇔≃× : ∀ {A B : Set} → A ⇔ B ≃ (A → B) × (B → A)
+⇔≃× =
+  record
+    { to = λ{ A⇔B → ⟨ to A⇔B , from A⇔B ⟩ }
+    ; from = λ{ ⟨ A→B , B→A ⟩ → record { to = A→B ; from = B→A } }
+    ; from∘to = λ{ A⇔B → refl }
+    ; to∘from = λ{ ⟨ A→B , B→A ⟩ → refl }
+    }
 ```
 
 
@@ -454,7 +464,18 @@ commutative and associative _up to isomorphism_.
 Show sum is commutative up to isomorphism.
 
 ```
--- Your code goes here
+⊎-comm : ∀ {A B : Set} → A ⊎ B ≃ B ⊎ A
+⊎-comm =
+  record
+    { to = case-⊎ inj₂ inj₁
+    ; from = case-⊎ inj₂ inj₁
+    ; from∘to = λ{ (inj₁ A) → refl
+                  ; (inj₂ B) → refl
+                  }
+    ; to∘from = λ{ (inj₁ B) → refl
+                  ; (inj₂ A) → refl
+                  }
+    }
 ```
 
 #### Exercise `⊎-assoc` (practice)
@@ -462,7 +483,20 @@ Show sum is commutative up to isomorphism.
 Show sum is associative up to isomorphism.
 
 ```
--- Your code goes here
+⊎-assoc : ∀ {A B C : Set} → A ⊎ (B ⊎ C) ≃ (A ⊎ B) ⊎ C
+⊎-assoc =
+  record
+    { to = case-⊎ (inj₁ ∘ inj₁) (case-⊎ (inj₁ ∘ inj₂) inj₂)
+    ; from = case-⊎ (case-⊎ inj₁ (inj₂ ∘ inj₁)) (inj₂ ∘ inj₂)
+    ; from∘to = λ{ (inj₁ A) → refl
+                  ; (inj₂ (inj₁ B)) → refl
+                  ; (inj₂ (inj₂ C)) → refl
+                  }
+    ; to∘from = λ{ (inj₁ (inj₁ A)) → refl
+                  ; (inj₁ (inj₂ B)) → refl
+                  ; (inj₂ C) → refl
+                  }
+    }
 ```
 
 ## False is empty
@@ -525,7 +559,14 @@ is the identity of sums _up to isomorphism_.
 Show empty is the left identity of sums up to isomorphism.
 
 ```
--- Your code goes here
+⊥-identityˡ : ∀ {A : Set} → ⊥ ⊎ A ≃ A
+⊥-identityˡ =
+  record
+    { to = case-⊎ ⊥-elim (λ{ A → A })
+    ; from = inj₂
+    ; from∘to = λ{ (inj₂ A) → refl }
+    ; to∘from = λ{ A → refl }
+    }
 ```
 
 #### Exercise `⊥-identityʳ` (practice)
@@ -533,7 +574,14 @@ Show empty is the left identity of sums up to isomorphism.
 Show empty is the right identity of sums up to isomorphism.
 
 ```
--- Your code goes here
+⊥-identityʳ : ∀ {A : Set} → A ⊎ ⊥ ≃ A
+⊥-identityʳ =
+  record
+    { to = case-⊎ (λ{ A → A }) ⊥-elim
+    ; from = inj₁
+    ; from∘to = λ{ (inj₁ A) → refl }
+    ; to∘from = λ{ A → refl }
+    }
 ```
 
 ## Implication is function {name=implication}
@@ -757,14 +805,22 @@ one of these laws is "more true" than the other.
 
 Show that the following property holds:
 ```
-postulate
-  ⊎-weak-× : ∀ {A B C : Set} → (A ⊎ B) × C → A ⊎ (B × C)
+-- postulate
+--   ⊎-weak-× : ∀ {A B C : Set} → (A ⊎ B) × C → A ⊎ (B × C)
 ```
 This is called a _weak distributive law_. Give the corresponding
 distributive law, and explain how it relates to the weak version.
 
 ```
--- Your code goes here
+⊎-weak-× : ∀ {A B C : Set} → (A ⊎ B) × C → A ⊎ (B × C)
+⊎-weak-× ⟨ inj₁ A , _ ⟩ = inj₁ A
+⊎-weak-× ⟨ inj₂ B , C ⟩ = inj₂ ⟨ B , C ⟩
+
+-- We can also prove this using ×-distrib-⊎
+open _≃_
+
+⊎-weak-×′ : ∀ {A B C : Set} → (A ⊎ B) × C → A ⊎ (B × C)
+⊎-weak-×′ = case-⊎ (inj₁ ∘ proj₁) inj₂ ∘ to ×-distrib-⊎
 ```
 
 
@@ -772,13 +828,37 @@ distributive law, and explain how it relates to the weak version.
 
 Show that a disjunct of conjuncts implies a conjunct of disjuncts:
 ```
-postulate
-  ⊎×-implies-×⊎ : ∀ {A B C D : Set} → (A × B) ⊎ (C × D) → (A ⊎ C) × (B ⊎ D)
+-- postulate
+--   ⊎×-implies-×⊎ : ∀ {A B C D : Set} → (A × B) ⊎ (C × D) → (A ⊎ C) × (B ⊎ D)
 ```
 Does the converse hold? If so, prove; if not, give a counterexample.
 
 ```
--- Your code goes here
+⊎×-implies-×⊎ : ∀ {A B C D : Set} → (A × B) ⊎ (C × D) → (A ⊎ C) × (B ⊎ D)
+⊎×-implies-×⊎ (inj₁ ⟨ A , B ⟩) = ⟨ inj₁ A , inj₁ B ⟩
+⊎×-implies-×⊎ (inj₂ ⟨ C , D ⟩) = ⟨ inj₂ C , inj₂ D ⟩
+
+×⊎-implies-⊎×-counter₁ : (⊤ ⊎ ⊥) × (⊥ ⊎ ⊤) ≃ ⊤
+×⊎-implies-⊎×-counter₁ =
+  record
+    { to = λ{ w → tt }
+    ; from = λ{ w → ⟨ inj₁ tt , inj₂ tt ⟩ }
+    ; from∘to = λ{ ⟨ inj₁ tt , inj₂ tt ⟩ → refl }
+    ; to∘from = λ{ tt → refl }
+    }
+
+×⊎-implies-⊎×-counter₂ : (⊤ × ⊥) ⊎ (⊥ × ⊤) ≃ ⊥
+×⊎-implies-⊎×-counter₂ =
+  record
+    { to = λ{ (inj₁ ⟨ tt , b ⟩) → b
+            ; (inj₂ ⟨ b , tt ⟩) → b
+            }
+    ; from = λ ()
+    ; from∘to = λ{ (inj₁ ⟨ tt , () ⟩)
+                  ; (inj₂ ⟨ () , tt ⟩)
+                  }
+    ; to∘from = λ ()
+    }
 ```
 
 
