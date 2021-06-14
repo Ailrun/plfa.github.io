@@ -193,7 +193,10 @@ Using negation, show that
 is irreflexive, that is, `n < n` holds for no `n`.
 
 ```
--- Your code goes here
+open import plfa.part1.Relations using (_<_; z<s; s<s)
+
+<-irrefl : ∀ (n : ℕ) → ¬ n < n
+<-irrefl (suc n) (s<s n<n) = <-irrefl n n<n
 ```
 
 
@@ -211,7 +214,33 @@ Here "exactly one" means that not only one of the three must hold,
 but that when one holds the negation of the other two must also hold.
 
 ```
--- Your code goes here
+data Trichotomy (m n : ℕ) : Set where
+  less-than : m < n
+    → ¬ m ≡ n
+    → ¬ n < m
+    → Trichotomy m n
+
+  equal-to : ¬ m < n
+    → m ≡ n
+    → ¬ n < m
+    → Trichotomy m n
+
+  greater-than : ¬ m < n
+    → ¬ m ≡ n
+    → n < m
+    → Trichotomy m n
+
+trichotomy : ∀ (m n : ℕ) → Trichotomy m n
+trichotomy zero zero = equal-to (λ ()) refl (λ ())
+trichotomy zero (suc n) = less-than z<s (λ ()) (λ ())
+trichotomy (suc m) zero = greater-than (λ ()) (λ ()) z<s
+trichotomy (suc m) (suc n) with trichotomy m n
+...                           | less-than     m<n ¬m≡n ¬n<m =
+                                  less-than (s<s m<n) (λ{ refl → ¬m≡n refl }) (λ{ (s<s n<m) → ¬n<m n<m })
+...                           | equal-to     ¬m<n  refl ¬n<m =
+                                  equal-to (λ{ (s<s m<n) → ¬n<m m<n }) refl (λ{ (s<s n<m) → ¬n<m n<m })
+...                           | greater-than ¬m<n ¬m≡n  n<m =
+                                  greater-than (λ{ (s<s m<n) → ¬m<n m<n }) (λ{ refl → ¬m≡n refl }) (s<s n<m)
 ```
 
 #### Exercise `⊎-dual-×` (recommended)
@@ -224,7 +253,20 @@ version of De Morgan's Law.
 This result is an easy consequence of something we've proved previously.
 
 ```
--- Your code goes here
+open import Function using (_∘_)
+open import Data.Product using (_,_)
+
+→-distrib-⊎ : ∀ {A B C : Set} → (A ⊎ B → C) ≃ ((A → C) × (B → C))
+→-distrib-⊎ =
+  record
+    { to      = λ{ f → f ∘ inj₁ , f ∘ inj₂ }
+    ; from    = λ{ (g , h) → λ{ (inj₁ x) → g x ; (inj₂ y) → h y } }
+    ; from∘to = λ{ f → extensionality λ{ (inj₁ x) → refl ; (inj₂ y) → refl } }
+    ; to∘from = λ{ (g , h) → refl }
+    }
+
+⊎-dual-× : ∀ {A B : Set} → ¬ (A ⊎ B) ≃ (¬ A) × (¬ B)
+⊎-dual-× = →-distrib-⊎
 ```
 
 
@@ -234,6 +276,15 @@ Do we also have the following?
 
 If so, prove; if not, can you give a relation weaker than
 isomorphism that relates the two sides?
+
+```
+-- This is not true. In fact, it's not possible to show
+-- even `¬ (A × B) → (¬ A) ⊎ (¬ B)` (implication).
+-- However, we can prove `(¬ A) ⊎ (¬ B) → ¬ (A × B)`.
+×-weak-dual-⊎ : ∀ {A B : Set} → (¬ A) ⊎ (¬ B) → ¬ (A × B)
+×-weak-dual-⊎ (inj₁ ¬A) (A , B) = ¬A A
+×-weak-dual-⊎ (inj₂ ¬B) (A , B) = ¬B B
+```
 
 
 ## Intuitive and Classical logic
@@ -381,7 +432,22 @@ Consider the following principles:
 Show that each of these implies all the others.
 
 ```
--- Your code goes here
+open Data.Sum using ([_,_])
+
+em→dne : (∀ {A : Set} → A ⊎ ¬ A) → (∀ {A : Set} → ¬ ¬ A → A)
+em→dne em ¬¬A = [ (λ A → A) , ⊥-elim ∘ ¬¬A ] em
+
+dne→peirce : (∀ {A : Set} → ¬ ¬ A → A) → (∀ {A B : Set} → ((A → B) → A) → A)
+dne→peirce dne [A→B]→A = dne (λ ¬A → ¬A ([A→B]→A (⊥-elim ∘ ¬A)))
+
+peirce→imp-disj : (∀ {A B : Set} → ((A → B) → A) → A) → (∀ {A B : Set} → (A → B) → ¬ A ⊎ B)
+peirce→imp-disj peirce A→B = peirce (λ x → inj₁ (x ∘ inj₂ ∘ A→B))
+
+imp-disj→de-morgan : (∀ {A B : Set} → (A → B) → ¬ A ⊎ B) → (∀ {A B : Set} → ¬ (¬ A × ¬ B) → A ⊎ B)
+imp-disj→de-morgan imp-disj ¬[¬A×¬B] = [ (λ ¬[A⊎B] → ⊥-elim (¬[¬A×¬B] (¬[A⊎B] ∘ inj₁ , ¬[A⊎B] ∘ inj₂))) , (λ A⊎B → A⊎B) ] (imp-disj (λ A⊎B → A⊎B))
+
+de-morgan→em : (∀ {A B : Set} → ¬ (¬ A × ¬ B) → A ⊎ B) → (∀ {A : Set} → A ⊎ ¬ A)
+de-morgan→em de-morgan = de-morgan (λ{ (¬A , ¬¬A) → ¬¬A ¬A })
 ```
 
 
@@ -396,7 +462,13 @@ Show that any negated formula is stable, and that the conjunction
 of two stable formulas is stable.
 
 ```
--- Your code goes here
+open Data.Product using (proj₁; proj₂)
+
+¬-stable : ∀ {A : Set} → Stable (¬ A)
+¬-stable ¬¬¬A = ¬¬¬A ∘ ¬¬-intro
+
+×-stable : ∀ {A B : Set} → Stable A → Stable B → Stable (A × B)
+×-stable sA sB ¬¬[A×B] = sA (λ ¬A → ¬¬[A×B] (¬A ∘ proj₁)) , sB (λ ¬B → ¬¬[A×B] (¬B ∘ proj₂))
 ```
 
 ## Standard Prelude
