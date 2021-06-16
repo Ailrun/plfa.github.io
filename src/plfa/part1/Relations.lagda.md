@@ -952,17 +952,17 @@ from-one-pos (o I) = z<s
 one-to-from-inv : ∀ {b : Bin}
   → One b
     -------------------
-  → One (to (from b))
-one-to-from-inv ⟨⟩I = ⟨⟩I
-one-to-from-inv {b O} (o O) rewrite to[2*n]≡[to[n]]O (from-one-pos o) = (one-to-from-inv o) O
-one-to-from-inv {b I} (o I) rewrite to[2*n]≡[to[n]]O (from-one-pos o) = (one-to-from-inv o) I
+  → to (from b) ≡ b
+one-to-from-inv ⟨⟩I = refl
+one-to-from-inv (o O) rewrite to[2*n]≡[to[n]]O (from-one-pos o) = cong _O (one-to-from-inv o)
+one-to-from-inv (o I) rewrite to[2*n]≡[to[n]]O (from-one-pos o) = cong _I (one-to-from-inv o)
 
 can-to-from-inv : ∀ {b : Bin}
   → Can b
     -------------------
-  → Can (to (from b))
-can-to-from-inv ⟨⟩O = ⟨⟩O
-can-to-from-inv (can o) = can (one-to-from-inv o)
+  → to (from b) ≡ b
+can-to-from-inv ⟨⟩O = refl
+can-to-from-inv (can o) = one-to-from-inv o
 ```
 
 ## Standard library
