@@ -564,7 +564,7 @@ open Data.Nat.Properties using (*-comm)
   → p ≤ q
     -------------
   → n * p ≤ n * q
-*-monoʳ-≤ zero p q p≤q = z≤n
+*-monoʳ-≤ zero    p q p≤q = z≤n
 *-monoʳ-≤ (suc n) p q p≤q = +-mono-≤ p q (n * p) (n * q) p≤q (*-monoʳ-≤ n p q p≤q)
 
 *-monoˡ-≤ : ∀ (m n p : ℕ)
@@ -630,7 +630,7 @@ Show that strict inequality is transitive.
   → n < p
     -------
   → m < p
-<-trans z<s (s<s n<p) = z<s
+<-trans z<s       (s<s n<p) = z<s
 <-trans (s<s m<n) (s<s n<p) = s<s (<-trans m<n n<p)
 ```
 
@@ -650,14 +650,14 @@ similar to that used for totality.
 
 ```
 data Trichotomy (m n : ℕ) : Set where
-  less-than : m < n -> Trichotomy m n
-  equal-to : m ≡ n -> Trichotomy m n
+  less-than    : m < n -> Trichotomy m n
+  equal-to     : m ≡ n -> Trichotomy m n
   greater-than : n < m -> Trichotomy m n
 
 <-trichotomy : ∀ (m n : ℕ) → Trichotomy m n
-<-trichotomy zero zero = equal-to refl
-<-trichotomy zero (suc n) = less-than z<s
-<-trichotomy (suc m) zero = greater-than z<s
+<-trichotomy zero    zero    = equal-to refl
+<-trichotomy zero    (suc n) = less-than z<s
+<-trichotomy (suc m) zero    = greater-than z<s
 <-trichotomy (suc m) (suc n) with <-trichotomy m n
 ...                             | less-than    m<n = less-than (s<s m<n)
 ...                             | equal-to     m≡n = equal-to (cong suc m≡n)
@@ -674,7 +674,7 @@ As with inequality, some additional definitions may be required.
   → p < q
     ---------------
   → n + p < n + q
-+-monoʳ-< zero p q p<q = p<q
++-monoʳ-< zero    p q p<q = p<q
 +-monoʳ-< (suc n) p q p<q = s<s (+-monoʳ-< n p q p<q)
 
 +-monoˡ-< : ∀ (m n p : ℕ)
@@ -697,11 +697,11 @@ Show that `suc m ≤ n` implies `m < n`, and conversely.
 
 ```
 ≤-if-< : ∀ {m n : ℕ} → suc m ≤ n → m < n
-≤-if-< {zero} (s≤s 0≤n) = z<s
+≤-if-< {zero}  (s≤s 0≤n)      = z<s
 ≤-if-< {suc m} (s≤s suc[m]≤n) = s<s (≤-if-< suc[m]≤n)
 
 <-if-≤ : ∀ {m n : ℕ} → m < n → suc m ≤ n
-<-if-≤ {zero} z<s = s≤s z≤n
+<-if-≤ {zero}  z<s       = s≤s z≤n
 <-if-≤ {suc m} (s<s m<n) = s≤s (<-if-≤ m<n)
 ```
 
@@ -837,7 +837,7 @@ e+o≡o : ∀ {m n : ℕ}
 
 o+o≡e (suc em) on = suc (e+o≡o em on)
 
-e+o≡o zero on = on
+e+o≡o zero     on = on
 e+o≡o (suc om) on = suc (o+o≡e om on)
 ```
 
@@ -896,8 +896,8 @@ open import plfa.part1.Induction using (Bin; ⟨⟩; _O; _I; inc; from; to)
 
 data One : Bin → Set where
   ⟨⟩I : One (⟨⟩ I)
-  _O : ∀ {b : Bin} → One b → One (b O)
-  _I : ∀ {b : Bin} → One b → One (b I)
+  _O  : ∀ {b : Bin} → One b → One (b O)
+  _I  : ∀ {b : Bin} → One b → One (b I)
 
 data Can : Bin → Set where
   ⟨⟩O : Can (⟨⟩ O)
@@ -907,7 +907,7 @@ inc-preserve-One : ∀ {b : Bin}
   → One b
     -------
   → One (inc b)
-inc-preserve-One ⟨⟩I = ⟨⟩I O
+inc-preserve-One ⟨⟩I   = ⟨⟩I O
 inc-preserve-One (o O) = o I
 inc-preserve-One (o I) = (inc-preserve-One o) O
 
@@ -915,13 +915,13 @@ inc-preserve-Can : ∀ {b : Bin}
   → Can b
     -------
   → Can (inc b)
-inc-preserve-Can ⟨⟩O = can ⟨⟩I
+inc-preserve-Can ⟨⟩O     = can ⟨⟩I
 inc-preserve-Can (can o) = can (inc-preserve-One o)
 
 to-Can : ∀ (n : ℕ)
     ------------
   → Can (to n)
-to-Can zero = ⟨⟩O
+to-Can zero    = ⟨⟩O
 to-Can (suc n) = inc-preserve-Can (to-Can n)
 
 to[2*n]≡[to[n]]O : ∀ {n : ℕ}
@@ -931,21 +931,21 @@ to[2*n]≡[to[n]]O {suc n} z<s = helper n
   where
     helper : ∀ (n : ℕ)
       → to (2 * suc n) ≡ (to (suc n)) O
-    helper zero = refl
+    helper zero    = refl
     helper (suc n) rewrite +-suc n (suc (n + 0)) | helper n = refl
 
 *-monoʳ-< : ∀ (n p q : ℕ)
   → p < q
     ---------------
   → suc n * p < suc n * q
-*-monoʳ-< zero p q p<q rewrite +-identityʳ p | +-identityʳ q = p<q
+*-monoʳ-< zero    p q p<q rewrite +-identityʳ p | +-identityʳ q = p<q
 *-monoʳ-< (suc n) p q p<q = +-mono-< _ _ _ _ p<q (*-monoʳ-< n p q p<q)
 
 from-one-pos : ∀ {b : Bin}
   → One b
     ------------
   → 0 < from b
-from-one-pos ⟨⟩I = z<s
+from-one-pos ⟨⟩I   = z<s
 from-one-pos (o O) = *-monoʳ-< 1 0 _ (from-one-pos o)
 from-one-pos (o I) = z<s
 
@@ -953,7 +953,7 @@ one-to-from-inv : ∀ {b : Bin}
   → One b
     -------------------
   → to (from b) ≡ b
-one-to-from-inv ⟨⟩I = refl
+one-to-from-inv ⟨⟩I   = refl
 one-to-from-inv (o O) rewrite to[2*n]≡[to[n]]O (from-one-pos o) = cong _O (one-to-from-inv o)
 one-to-from-inv (o I) rewrite to[2*n]≡[to[n]]O (from-one-pos o) = cong _I (one-to-from-inv o)
 
@@ -961,7 +961,7 @@ can-to-from-inv : ∀ {b : Bin}
   → Can b
     -------------------
   → to (from b) ≡ b
-can-to-from-inv ⟨⟩O = refl
+can-to-from-inv ⟨⟩O     = refl
 can-to-from-inv (can o) = one-to-from-inv o
 ```
 

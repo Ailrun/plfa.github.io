@@ -247,8 +247,8 @@ open _⇔_
 ⇔≃× : ∀ {A B : Set} → A ⇔ B ≃ (A → B) × (B → A)
 ⇔≃× =
   record
-    { to = λ{ A⇔B → ⟨ to A⇔B , from A⇔B ⟩ }
-    ; from = λ{ ⟨ A→B , B→A ⟩ → record { to = A→B ; from = B→A } }
+    { to      = λ{ A⇔B → ⟨ to A⇔B , from A⇔B ⟩ }
+    ; from    = λ{ ⟨ A→B , B→A ⟩ → record { to = A→B ; from = B→A } }
     ; from∘to = λ{ A⇔B → refl }
     ; to∘from = λ{ ⟨ A→B , B→A ⟩ → refl }
     }
@@ -467,14 +467,14 @@ Show sum is commutative up to isomorphism.
 ⊎-comm : ∀ {A B : Set} → A ⊎ B ≃ B ⊎ A
 ⊎-comm =
   record
-    { to = case-⊎ inj₂ inj₁
-    ; from = case-⊎ inj₂ inj₁
+    { to      = case-⊎ inj₂ inj₁
+    ; from    = case-⊎ inj₂ inj₁
     ; from∘to = λ{ (inj₁ A) → refl
-                  ; (inj₂ B) → refl
-                  }
+                 ; (inj₂ B) → refl
+                 }
     ; to∘from = λ{ (inj₁ B) → refl
-                  ; (inj₂ A) → refl
-                  }
+                 ; (inj₂ A) → refl
+                 }
     }
 ```
 
@@ -486,16 +486,16 @@ Show sum is associative up to isomorphism.
 ⊎-assoc : ∀ {A B C : Set} → A ⊎ (B ⊎ C) ≃ (A ⊎ B) ⊎ C
 ⊎-assoc =
   record
-    { to = case-⊎ (inj₁ ∘ inj₁) (case-⊎ (inj₁ ∘ inj₂) inj₂)
-    ; from = case-⊎ (case-⊎ inj₁ (inj₂ ∘ inj₁)) (inj₂ ∘ inj₂)
-    ; from∘to = λ{ (inj₁ A) → refl
-                  ; (inj₂ (inj₁ B)) → refl
-                  ; (inj₂ (inj₂ C)) → refl
-                  }
+    { to      = case-⊎ (inj₁ ∘ inj₁) (case-⊎ (inj₁ ∘ inj₂) inj₂)
+    ; from    = case-⊎ (case-⊎ inj₁ (inj₂ ∘ inj₁)) (inj₂ ∘ inj₂)
+    ; from∘to = λ{ (inj₁ A)        → refl
+                 ; (inj₂ (inj₁ B)) → refl
+                 ; (inj₂ (inj₂ C)) → refl
+                 }
     ; to∘from = λ{ (inj₁ (inj₁ A)) → refl
-                  ; (inj₁ (inj₂ B)) → refl
-                  ; (inj₂ C) → refl
-                  }
+                 ; (inj₁ (inj₂ B)) → refl
+                 ; (inj₂ C)        → refl
+                 }
     }
 ```
 
@@ -562,8 +562,8 @@ Show empty is the left identity of sums up to isomorphism.
 ⊥-identityˡ : ∀ {A : Set} → ⊥ ⊎ A ≃ A
 ⊥-identityˡ =
   record
-    { to = case-⊎ ⊥-elim (λ{ A → A })
-    ; from = inj₂
+    { to      = case-⊎ ⊥-elim (λ{ A → A })
+    ; from    = inj₂
     ; from∘to = λ{ (inj₂ A) → refl }
     ; to∘from = λ{ A → refl }
     }
@@ -577,8 +577,8 @@ Show empty is the right identity of sums up to isomorphism.
 ⊥-identityʳ : ∀ {A : Set} → A ⊎ ⊥ ≃ A
 ⊥-identityʳ =
   record
-    { to = case-⊎ (λ{ A → A }) ⊥-elim
-    ; from = inj₁
+    { to      = case-⊎ (λ{ A → A }) ⊥-elim
+    ; from    = inj₁
     ; from∘to = λ{ (inj₁ A) → refl }
     ; to∘from = λ{ A → refl }
     }
@@ -841,8 +841,8 @@ Does the converse hold? If so, prove; if not, give a counterexample.
 ×⊎-implies-⊎×-counter₁ : (⊤ ⊎ ⊥) × (⊥ ⊎ ⊤) ≃ ⊤
 ×⊎-implies-⊎×-counter₁ =
   record
-    { to = λ{ w → tt }
-    ; from = λ{ w → ⟨ inj₁ tt , inj₂ tt ⟩ }
+    { to      = λ{ w → tt }
+    ; from    = λ{ w → ⟨ inj₁ tt , inj₂ tt ⟩ }
     ; from∘to = λ{ ⟨ inj₁ tt , inj₂ tt ⟩ → refl }
     ; to∘from = λ{ tt → refl }
     }
@@ -850,13 +850,13 @@ Does the converse hold? If so, prove; if not, give a counterexample.
 ×⊎-implies-⊎×-counter₂ : (⊤ × ⊥) ⊎ (⊥ × ⊤) ≃ ⊥
 ×⊎-implies-⊎×-counter₂ =
   record
-    { to = λ{ (inj₁ ⟨ tt , b ⟩) → b
-            ; (inj₂ ⟨ b , tt ⟩) → b
-            }
-    ; from = λ ()
+    { to      = λ{ (inj₁ ⟨ tt , b ⟩) → b
+                 ; (inj₂ ⟨ b , tt ⟩) → b
+                 }
+    ; from    = λ ()
     ; from∘to = λ{ (inj₁ ⟨ tt , () ⟩)
-                  ; (inj₂ ⟨ () , tt ⟩)
-                  }
+                 ; (inj₂ ⟨ () , tt ⟩)
+                 }
     ; to∘from = λ ()
     }
 ```

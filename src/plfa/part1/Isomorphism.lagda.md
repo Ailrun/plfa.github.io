@@ -453,8 +453,8 @@ Show that every isomorphism implies an embedding.
   → A ≲ B
 ≃-implies-≲ A≃B =
   record
-    { to = to A≃B
-    ; from = from A≃B
+    { to      = to A≃B
+    ; from    = from A≃B
     ; from∘to = from∘to A≃B
     }
 ```
@@ -478,7 +478,7 @@ open _⇔_
   → A ⇔ A
 ⇔-refl =
   record
-    { to = λ{z → z}
+    { to   = λ{z → z}
     ; from = λ{z → z}
     }
 
@@ -488,7 +488,7 @@ open _⇔_
   → B ⇔ A
 ⇔-sym A⇔B =
   record
-    { to = from A⇔B
+    { to   = from A⇔B
     ; from = to A⇔B
     }
 
@@ -499,7 +499,7 @@ open _⇔_
   → A ⇔ C
 ⇔-trans A⇔B B⇔C =
   record
-    { to = to B⇔C ∘ to A⇔B
+    { to   = to B⇔C ∘ to A⇔B
     ; from = from A⇔B ∘ from B⇔C
     }
 ```
@@ -526,8 +526,8 @@ open import plfa.part1.Induction as Bin using (Bin; ⟨⟩; _O; _I; inc; from; t
 ℕ≲Bin : ℕ ≲ Bin
 ℕ≲Bin =
   record
-    { to = Bin.to
-    ; from = Bin.from
+    { to      = Bin.to
+    ; from    = Bin.from
     ; from∘to = from-to-inv
     }
 ```

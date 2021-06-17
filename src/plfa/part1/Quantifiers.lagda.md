@@ -106,8 +106,8 @@ open import Function using (_∘_)
   (∀ (x : A) → B x × C x) ≃ (∀ (x : A) → B x) × (∀ (x : A) → C x)
 ∀-distrib-× =
   record
-    { to = λ{ f → ⟨ proj₁ ∘ f , proj₂ ∘ f ⟩ }
-    ; from = λ{ ⟨ f , g ⟩ x → ⟨ f x , g x ⟩ }
+    { to      = λ{ f → ⟨ proj₁ ∘ f , proj₂ ∘ f ⟩ }
+    ; from    = λ{ ⟨ f , g ⟩ x → ⟨ f x , g x ⟩ }
     ; from∘to = λ{ _ → refl }
     ; to∘from = λ{ _ → refl }
     }
@@ -137,17 +137,18 @@ Does the converse hold? If so, prove; if not, explain why.
 open Data.Sum renaming ([_,_] to case-⊎)
 
 ℕ-zero-or-not : ∀ (x : ℕ) → x ≡ 0 ⊎ ¬ x ≡ 0
-ℕ-zero-or-not zero = inj₁ refl
+ℕ-zero-or-not zero    = inj₁ refl
 ℕ-zero-or-not (suc x) = inj₂ (λ ())
 
 ∀⊎-implies-⊎∀-counter :
   ¬ ((∀ (x : ℕ) → x ≡ 0 ⊎ ¬ (x ≡ 0))  →  (∀ (x : ℕ) → x ≡ 0) ⊎ (∀ (x : ℕ) → ¬ (x ≡ 0)))
-∀⊎-implies-⊎∀-counter contra with contra ℕ-zero-or-not
-...                               | inj₁ f = 1≢0 (f 1)
+∀⊎-implies-⊎∀-counter contra
+  with contra ℕ-zero-or-not
+...  | inj₁ f = 1≢0 (f 1)
   where
     1≢0 : ¬ 1 ≡ 0
     1≢0 ()
-...                               | inj₂ g = g 0 refl
+...  | inj₂ g = g 0 refl
 ```
 
 
@@ -172,13 +173,13 @@ open plfa.part1.Isomorphism using (∀-extensionality)
   → (∀ (x : Tri) → B x) ≃ (B aa × B bb × B cc)
 ∀-× =
   record
-    { to = λ f → ⟨ f aa , ⟨ f bb , f cc ⟩ ⟩
-    ; from = λ{ ⟨ fa , ⟨ fb , fc ⟩ ⟩ →
-               λ{ aa → fa
-                ; bb → fb
-                ; cc → fc
-                }
-              }
+    { to      = λ f → ⟨ f aa , ⟨ f bb , f cc ⟩ ⟩
+    ; from    = λ{ ⟨ fa , ⟨ fb , fc ⟩ ⟩ →
+                  λ{ aa → fa
+                   ; bb → fb
+                   ; cc → fc
+                   }
+                 }
     ; from∘to = λ _ → ∀-extensionality
                           (λ{ aa → refl
                             ; bb → refl
@@ -329,11 +330,11 @@ Show that existentials distribute over disjunction:
               ; (inj₂ ⟨ a , c ⟩) → ⟨ a , inj₂ c ⟩
               }
     ; from∘to = λ{ ⟨ _ , inj₁ _ ⟩ → refl
-                  ; ⟨ _ , inj₂ _ ⟩ → refl
-                  }
+                 ; ⟨ _ , inj₂ _ ⟩ → refl
+                 }
     ; to∘from = λ{ (inj₁ ⟨ _ , _ ⟩) → refl
-                  ; (inj₂ ⟨ _ , _ ⟩) → refl
-                  }
+                 ; (inj₂ ⟨ _ , _ ⟩) → refl
+                 }
     }
 ```
 
@@ -357,20 +358,21 @@ open import Data.Empty using (⊥)
 open import Data.Unit using (⊤; tt)
 
 ℕ-if-zero : ℕ → Set
-ℕ-if-zero zero = ⊤
+ℕ-if-zero zero    = ⊤
 ℕ-if-zero (suc n) = ⊥
 
 ℕ-if-one : ℕ → Set
-ℕ-if-one zero = ⊥
-ℕ-if-one (suc zero) = ⊤
+ℕ-if-one zero          = ⊥
+ℕ-if-one (suc zero)    = ⊤
 ℕ-if-one (suc (suc n)) = ⊥
 
 ×∃-implies-∃×-counter :
   ¬ ((∃[ x ] ℕ-if-zero x) × (∃[ x ] ℕ-if-one x) → (∃[ x ] (ℕ-if-zero x × ℕ-if-one x)))
-×∃-implies-∃×-counter contra with contra ⟨ ⟨ 0 , tt ⟩ , ⟨ 1 , tt ⟩ ⟩
-...                               | ⟨ zero , ⟨ if0 , if1 ⟩ ⟩ = if1
-...                               | ⟨ suc zero , ⟨ if0 , if1 ⟩ ⟩ = if0
-...                               | ⟨ suc (suc x) , ⟨ if0 , if1 ⟩ ⟩ = if0
+×∃-implies-∃×-counter contra
+  with contra ⟨ ⟨ 0 , tt ⟩ , ⟨ 1 , tt ⟩ ⟩
+...  | ⟨ zero        , ⟨ if0 , if1 ⟩ ⟩ = if1
+...  | ⟨ suc zero    , ⟨ if0 , if1 ⟩ ⟩ = if0
+...  | ⟨ suc (suc x) , ⟨ if0 , if1 ⟩ ⟩ = if0
 ```
 
 #### Exercise `∃-⊎` (practice)
@@ -383,21 +385,22 @@ Show that `∃[ x ] B x` is isomorphic to `B aa ⊎ B bb ⊎ B cc`.
   → ∃[ x ] B x ≃ B aa ⊎ B bb ⊎ B cc
 ∃-⊎ =
   record
-    { to = λ{ ⟨ aa , fa ⟩ → inj₁ fa
-            ; ⟨ bb , fb ⟩ → inj₂ (inj₁ fb)
-            ; ⟨ cc , fc ⟩ → inj₂ (inj₂ fc) }
-    ; from = λ{ (inj₁ fa) → ⟨ aa , fa ⟩
-              ; (inj₂ (inj₁ fb)) → ⟨ bb , fb ⟩
-              ; (inj₂ (inj₂ fc)) → ⟨ cc , fc ⟩
-              }
+    { to      = λ{ ⟨ aa , fa ⟩ → inj₁ fa
+                 ; ⟨ bb , fb ⟩ → inj₂ (inj₁ fb)
+                 ; ⟨ cc , fc ⟩ → inj₂ (inj₂ fc)
+                 }
+    ; from    = λ{ (inj₁ fa)        → ⟨ aa , fa ⟩
+                 ; (inj₂ (inj₁ fb)) → ⟨ bb , fb ⟩
+                 ; (inj₂ (inj₂ fc)) → ⟨ cc , fc ⟩
+                 }
     ; from∘to = λ{ ⟨ aa , _ ⟩ → refl
-                  ; ⟨ bb , _ ⟩ → refl
-                  ; ⟨ cc , _ ⟩ → refl
-                  }
-    ; to∘from = λ{ (inj₁ _) → refl
-                  ; (inj₂ (inj₁ _)) → refl
-                  ; (inj₂ (inj₂ _)) → refl
-                  }
+                 ; ⟨ bb , _ ⟩ → refl
+                 ; ⟨ cc , _ ⟩ → refl
+                 }
+    ; to∘from = λ{ (inj₁ _)        → refl
+                 ; (inj₂ (inj₁ _)) → refl
+                 ; (inj₂ (inj₂ _)) → refl
+                 }
     }
 ```
 
@@ -516,9 +519,9 @@ open import Data.Nat.Properties using (+-comm; +-suc)
 ∃-even′ : ∀ {n : ℕ} → ∃[ m ] (2 * m     ≡ n) → even n
 ∃-odd′  : ∀ {n : ℕ} → ∃[ m ] (2 * m + 1 ≡ n) →  odd n
 
-∃-even′ ⟨  zero , refl ⟩ = even-zero
+∃-even′ ⟨ zero  , refl ⟩ = even-zero
 ∃-even′ ⟨ suc m , refl ⟩ = even-suc (∃-odd′ ⟨ m , trans (+-comm (2 * m) 1) (sym (+-suc m (m + 0))) ⟩)
-∃-odd′  ⟨  zero , refl ⟩ = odd-suc even-zero
+∃-odd′  ⟨ zero  , refl ⟩ = odd-suc even-zero
 ∃-odd′  ⟨ suc m , refl ⟩ = odd-suc (∃-even′ ⟨ suc m , +-comm 1 (m + suc (m + 0)) ⟩)
 ```
 
@@ -532,12 +535,12 @@ open Data.Nat using (_≤_; z≤n; s≤s)
 open Data.Nat.Properties using (+-identityʳ)
 
 ∃-|-≤ : ∀ {y z} → y ≤ z -> ∃[ x ] (x + y ≡ z)
-∃-|-≤ {y} {z} z≤n = ⟨ z , +-identityʳ z ⟩
+∃-|-≤ {y}     {z}     z≤n       = ⟨ z , +-identityʳ z ⟩
 ∃-|-≤ {suc y} {suc z} (s≤s y≤z) with ∃-|-≤ y≤z
-...                                 | ⟨ x , refl ⟩ = ⟨ x , +-suc x y ⟩
+...                                | ⟨ x , refl ⟩ = ⟨ x , +-suc x y ⟩
 
 ≤-|-∃ : ∀ {y z} → ∃[ x ] (x + y ≡ z) → y ≤ z
-≤-|-∃ {zero} _ = z≤n
+≤-|-∃ {zero}  _            = z≤n
 ≤-|-∃ {suc y} ⟨ x , refl ⟩ rewrite +-suc x y = s≤s (≤-|-∃ ⟨ x , refl ⟩)
 ```
 
@@ -602,7 +605,7 @@ Does the converse hold? If so, prove; if not, explain why.
 ¬∀-implies-∃¬-dne : (∀ {A : Set} {B : A → Set} → ¬ (∀ x → B x) → ∃[ x ] (¬ B x))
   -> (∀ {A : Set} → ¬ ¬ A → A)
 ¬∀-implies-∃¬-dne ¬∀-∃¬ ¬¬A with ¬∀-∃¬ ¬¬A
-...                               | ⟨ a , _ ⟩ = a
+...                            | ⟨ a , _ ⟩ = a
 ```
 
 
@@ -653,14 +656,14 @@ open import plfa.part1.Induction using (Bin; to; from; _O; _I; from-to-inv)
 open import plfa.part1.Relations using (One; _O; _I; ⟨⟩I; Can; ⟨⟩O; can; to-Can; can-to-from-inv)
 
 ≡One : ∀{b : Bin} (o o' : One b) → o ≡ o'
-≡One ⟨⟩I ⟨⟩I = refl
+≡One ⟨⟩I   ⟨⟩I    = refl
 ≡One (o O) (o' O) = cong _O (≡One o o')
 ≡One (o I) (o' I) = cong _I (≡One o o')
 
 ≡Can : ∀{b : Bin} (cb : Can b) (cb' : Can b) → cb ≡ cb'
-≡Can ⟨⟩O ⟨⟩O = refl
-≡Can (can o) (can o') = cong can (≡One o o')
-≡Can ⟨⟩O (can (() O))
+≡Can ⟨⟩O          ⟨⟩O          = refl
+≡Can (can o)      (can o')     = cong can (≡One o o')
+≡Can ⟨⟩O          (can (() O))
 ≡Can (can (() O)) ⟨⟩O
 
 proj₁′′ : ∀ {A : Set} {B : A → Set} → ∃[ x ] B x → A
@@ -672,8 +675,8 @@ proj₁′′≡→Can≡ {⟨ b , cb ⟩} {⟨ .b , cb' ⟩} refl rewrite ≡Ca
 ℕ≃∃[b]Can[b] : ℕ ≃ ∃[ b ](Can b)
 ℕ≃∃[b]Can[b] =
   record
-    { to = λ{ n → ⟨ to n , to-Can n ⟩ }
-    ; from = λ{ ⟨ b , _ ⟩ → from b }
+    { to      = λ{ n → ⟨ to n , to-Can n ⟩ }
+    ; from    = λ{ ⟨ b , _ ⟩ → from b }
     ; from∘to = from-to-inv
     ; to∘from = λ{ ⟨ _ , cb ⟩ → proj₁′′≡→Can≡ (can-to-from-inv cb) }
     }

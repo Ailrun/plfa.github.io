@@ -989,7 +989,7 @@ Confirm that these both give the correct answer for zero through four.
 
 ```
 inc : Bin → Bin
-inc ⟨⟩ = ⟨⟩ I
+inc ⟨⟩    = ⟨⟩ I
 inc (b O) = b I
 inc (b I) = (inc b) O
 
@@ -999,11 +999,11 @@ _ = begin inc (⟨⟩ I O) ≡⟨⟩ ⟨⟩ I I ∎
 _ = begin inc (⟨⟩ I I) ≡⟨⟩ ⟨⟩ I O O ∎
 
 to : ℕ → Bin
-to zero = ⟨⟩ O
+to zero    = ⟨⟩ O
 to (suc n) = inc (to n)
 
 from : Bin → ℕ
-from ⟨⟩ = zero
+from ⟨⟩    = zero
 from (b O) = suc (suc zero) * from b
 from (b I) = suc zero + suc (suc zero) * from b
 

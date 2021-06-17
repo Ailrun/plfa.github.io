@@ -903,7 +903,7 @@ is associative and commutative.
 
 ```
 +-swap : ∀ (m n p : ℕ) → m + (n + p) ≡ n + (m + p)
-+-swap  m n p rewrite sym (+-assoc m n p) | +-comm m n | +-assoc n m p = refl
++-swap m n p rewrite sym (+-assoc m n p) | +-comm m n | +-assoc n m p = refl
 ```
 
 
@@ -917,7 +917,7 @@ for all naturals `m`, `n`, and `p`.
 
 ```
 *-distrib-+ : ∀ (m n p : ℕ) → (m + n) * p ≡ m * p + n * p
-*-distrib-+ zero n p = refl
+*-distrib-+ zero    n p = refl
 *-distrib-+ (suc m) n p rewrite *-distrib-+ m n p | +-assoc p (m * p) (n * p) = refl
 ```
 
@@ -932,7 +932,7 @@ for all naturals `m`, `n`, and `p`.
 
 ```
 *-assoc : ∀ (m n p : ℕ) → (m * n) * p ≡ m * (n * p)
-*-assoc zero n p = refl
+*-assoc zero    n p = refl
 *-assoc (suc m) n p rewrite *-distrib-+ n (m * n) p | *-assoc m n p = refl
 ```
 
@@ -948,15 +948,15 @@ you will need to formulate and prove suitable lemmas.
 
 ```
 *-zeroʳ : ∀ (m : ℕ) → m * 0 ≡ 0
-*-zeroʳ zero = refl
+*-zeroʳ zero    = refl
 *-zeroʳ (suc m) = *-zeroʳ m
 
 *-suc : ∀ (m n : ℕ) → m * suc n ≡ m + m * n
-*-suc zero n = refl
+*-suc zero    n = refl
 *-suc (suc m) n rewrite *-suc m n | +-swap n m (m * n) = refl
 
 *-comm : ∀ (m n : ℕ) → m * n ≡ n * m
-*-comm m zero = *-zeroʳ m
+*-comm m zero    = *-zeroʳ m
 *-comm m (suc n) rewrite *-suc m n | *-comm m n = refl
 ```
 
@@ -971,7 +971,7 @@ for all naturals `n`. Did your proof require induction?
 
 ```
 0∸n≡0 : ∀ (n : ℕ) → zero ∸ n ≡ zero
-0∸n≡0 zero = refl
+0∸n≡0 zero    = refl
 0∸n≡0 (suc n) = refl
 ```
 
@@ -986,8 +986,8 @@ for all naturals `m`, `n`, and `p`.
 
 ```
 ∸-|-assoc : ∀ (m n p : ℕ) → m ∸ n ∸ p ≡ m ∸ (n + p)
-∸-|-assoc m zero p = refl
-∸-|-assoc zero (suc n) p = 0∸n≡0 p
+∸-|-assoc m       zero    p = refl
+∸-|-assoc zero    (suc n) p = 0∸n≡0 p
 ∸-|-assoc (suc m) (suc n) p = ∸-|-assoc m n p
 ```
 
@@ -1006,21 +1006,21 @@ for all `m`, `n`, and `p`.
 open Data.Nat using (_^_)
 
 ^-distribˡ-|-* : ∀ (m n p : ℕ) → m ^ (n + p) ≡ (m ^ n) * (m ^ p)
-^-distribˡ-|-* m zero p rewrite +-identityʳ (m ^ p) = refl
+^-distribˡ-|-* m zero    p rewrite +-identityʳ (m ^ p) = refl
 ^-distribˡ-|-* m (suc n) p rewrite ^-distribˡ-|-* m n p | *-assoc m (m ^ n) (m ^ p) = refl
 
 *-swap : ∀ (m n p : ℕ) → m * (n * p) ≡ n * (m * p)
 *-swap m n p rewrite sym (*-assoc m n p) | *-comm m n | *-assoc n m p = refl
 
 ^-distribʳ-* : ∀ (m n p : ℕ) → (m * n) ^ p ≡ (m ^ p) * (n ^ p)
-^-distribʳ-* m n zero = refl
+^-distribʳ-* m n zero    = refl
 ^-distribʳ-* m n (suc p) rewrite ^-distribʳ-* m n p
                               | *-assoc m n ((m ^ p) * (n ^ p))
                               | *-swap n (m ^ p) (n ^ p)
                               | *-assoc m (m ^ p) (n * (n ^ p)) = refl
 
 ^-*-assoc : ∀ (m n p : ℕ) → (m ^ n) ^ p ≡ m ^ (n * p)
-^-*-assoc m n zero rewrite *-zeroʳ n = refl
+^-*-assoc m n zero    rewrite *-zeroʳ n = refl
 ^-*-assoc m n (suc p) rewrite *-suc n p | ^-distribˡ-|-* m n (n * p) | ^-*-assoc m n p = refl
 ```
 
@@ -1052,21 +1052,21 @@ data Bin : Set where
   _I : Bin → Bin
 
 inc : Bin → Bin
-inc ⟨⟩ = ⟨⟩ I
+inc ⟨⟩    = ⟨⟩ I
 inc (b O) = b I
 inc (b I) = (inc b) O
 
 to : ℕ → Bin
-to zero = ⟨⟩ O
+to zero    = ⟨⟩ O
 to (suc n) = inc (to n)
 
 from : Bin → ℕ
-from ⟨⟩ = zero
+from ⟨⟩    = zero
 from (b O) = suc (suc zero) * from b
 from (b I) = suc zero + suc (suc zero) * from b
 
 from-inc≡suc-from : ∀ (b : Bin) → from (inc b) ≡ suc (from b)
-from-inc≡suc-from ⟨⟩ = refl
+from-inc≡suc-from ⟨⟩    = refl
 from-inc≡suc-from (b O) = refl
 from-inc≡suc-from (b I) rewrite from-inc≡suc-from b | +-suc (from b) (from b + 0) = refl
 
@@ -1074,7 +1074,7 @@ to-from-inv-counter : to (from ⟨⟩) ≡ ⟨⟩ O
 to-from-inv-counter = refl
 
 from-to-inv : ∀ (n : ℕ) → from (to n) ≡ n
-from-to-inv zero = refl
+from-to-inv zero    = refl
 from-to-inv (suc n) rewrite from-inc≡suc-from (to n) | from-to-inv n = refl
 ```
 

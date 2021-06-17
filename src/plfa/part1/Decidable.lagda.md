@@ -324,7 +324,7 @@ zero  ≡ℕ? suc n = no (λ ())
 suc m ≡ℕ? zero  = no (λ ())
 suc m ≡ℕ? suc n with m ≡ℕ? n
 ...                 | yes refl = yes refl
-...                 | no  m≢n = no (λ{ refl → m≢n refl })
+...                 | no  m≢n  = no (λ{ refl → m≢n refl })
 ```
 
 
@@ -561,10 +561,10 @@ Show that erasure relates corresponding boolean and decidable operations:
 ∧-× : ∀ {A B : Set} (x : Dec A) (y : Dec B) → ⌊ x ⌋ ∧ ⌊ y ⌋ ≡ ⌊ x ×-dec y ⌋
 ∧-× (yes _) (yes _) = refl
 ∧-× (yes _) (no  _) = refl
-∧-× (no  _)      _  = refl
+∧-× (no  _) _       = refl
 
 ∨-⊎ : ∀ {A B : Set} (x : Dec A) (y : Dec B) → ⌊ x ⌋ ∨ ⌊ y ⌋ ≡ ⌊ x ⊎-dec y ⌋
-∨-⊎ (yes _)      _  = refl
+∨-⊎ (yes _) _       = refl
 ∨-⊎ (no  _) (yes _) = refl
 ∨-⊎ (no  _) (no  _) = refl
 
@@ -587,9 +587,9 @@ operation on booleans and decidables, and also show the corresponding erasure:
 
 ```
 _iff_ : Bool → Bool → Bool
-true iff true = true
-true iff false = false
-false iff true = false
+true  iff true  = true
+true  iff false = false
+false iff true  = false
 false iff false = true
 
 open _⇔_
@@ -685,11 +685,11 @@ False Q = T (not ⌊ Q ⌋)
 
 toWitnessFalse : ∀ {A : Set} {D : Dec A} → False D → ¬ A
 toWitnessFalse {A} {yes x} ()
-toWitnessFalse {A} {no ¬x} tt  = ¬x
+toWitnessFalse {A} {no ¬x} tt = ¬x
 
 fromWitnessFalse : ∀ {A : Set} {D : Dec A} → ¬ A → False D
-fromWitnessFalse {A} {yes x} ¬x  =  ¬x x
-fromWitnessFalse {A} {no ¬x}  _  =  tt
+fromWitnessFalse {A} {yes x} ¬x = ¬x x
+fromWitnessFalse {A} {no ¬x} _  = tt
 ```
 
 

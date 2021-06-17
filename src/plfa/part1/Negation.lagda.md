@@ -215,29 +215,35 @@ but that when one holds the negation of the other two must also hold.
 
 ```
 data Trichotomy (m n : ℕ) : Set where
-  less-than : m < n
+  less-than :
+      m < n
     → ¬ m ≡ n
     → ¬ n < m
+      --------------
     → Trichotomy m n
 
-  equal-to : ¬ m < n
+  equal-to :
+      ¬ m < n
     → m ≡ n
     → ¬ n < m
+      --------------
     → Trichotomy m n
 
-  greater-than : ¬ m < n
+  greater-than :
+      ¬ m < n
     → ¬ m ≡ n
     → n < m
+      --------------
     → Trichotomy m n
 
 trichotomy : ∀ (m n : ℕ) → Trichotomy m n
-trichotomy zero zero = equal-to (λ ()) refl (λ ())
-trichotomy zero (suc n) = less-than z<s (λ ()) (λ ())
-trichotomy (suc m) zero = greater-than (λ ()) (λ ()) z<s
+trichotomy zero    zero    = equal-to (λ ()) refl (λ ())
+trichotomy zero    (suc n) = less-than z<s (λ ()) (λ ())
+trichotomy (suc m) zero    = greater-than (λ ()) (λ ()) z<s
 trichotomy (suc m) (suc n) with trichotomy m n
 ...                           | less-than     m<n ¬m≡n ¬n<m =
                                   less-than (s<s m<n) (λ{ refl → ¬m≡n refl }) (λ{ (s<s n<m) → ¬n<m n<m })
-...                           | equal-to     ¬m<n  refl ¬n<m =
+...                           | equal-to     ¬m<n refl ¬n<m =
                                   equal-to (λ{ (s<s m<n) → ¬n<m m<n }) refl (λ{ (s<s n<m) → ¬n<m n<m })
 ...                           | greater-than ¬m<n ¬m≡n  n<m =
                                   greater-than (λ{ (s<s m<n) → ¬m<n m<n }) (λ{ refl → ¬m≡n refl }) (s<s n<m)

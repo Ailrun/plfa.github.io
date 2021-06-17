@@ -378,7 +378,7 @@ infix 4 _≤_
 ≤-refl : ∀ {n : ℕ}
     -----
   → n ≤ n
-≤-refl {zero} = z≤n
+≤-refl {zero}  = z≤n
 ≤-refl {suc n} = s≤s ≤-refl
 
 ≤-trans : ∀ {m n p : ℕ}
@@ -399,27 +399,27 @@ module ≤-Reasoning where
     → x ≤ y
       -----
     → x ≤ y
-  begin-≤ x≤y  =  x≤y
+  begin-≤ x≤y = x≤y
 
   _≤⟨⟩_ : ∀ (x : ℕ) {y : ℕ}
     → x ≤ y
       -----
     → x ≤ y
-  x ≤⟨⟩ x≤y  =  x≤y
+  x ≤⟨⟩ x≤y = x≤y
 
   _≤⟨_⟩_ : ∀ (x : ℕ) {y z : ℕ}
     → x ≤ y
     → y ≤ z
       -----
     → x ≤ z
-  x ≤⟨ x≤y ⟩ y≤z  = ≤-trans x≤y y≤z
+  x ≤⟨ x≤y ⟩ y≤z = ≤-trans x≤y y≤z
 
   _≡≤⟨_⟩_ : ∀ (x : ℕ) {y z : ℕ}
     → x ≡ y
     → y ≤ z
       -----
     → x ≤ z
-  x ≡≤⟨ refl ⟩ y≤z  = y≤z
+  x ≡≤⟨ refl ⟩ y≤z = y≤z
 
   _∎-≤ : ∀ (x : ℕ)
       -----
