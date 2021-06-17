@@ -197,7 +197,12 @@ two natural numbers.  Your definition may use `plus` as
 defined earlier.
 
 ```
--- Your code goes here
+mul : Term
+mul = μ "*" ⇒ ƛ "m" ⇒ ƛ "n" ⇒
+  case ` "m"
+    [zero⇒ `zero
+    |suc "m" ⇒ plus · ` "n" · (` "*" · ` "m" · ` "n")
+    ]
 ```
 
 
@@ -209,7 +214,9 @@ definition may use `plusᶜ` as defined earlier (or may not
 — there are nice definitions both ways).
 
 ```
--- Your code goes here
+mulᶜ : Term
+mulᶜ = ƛ "m" ⇒ ƛ "n" ⇒ ƛ "s" ⇒ ƛ "z" ⇒
+  ` "m" · (` "n" · ` "s") · ` "z"
 ```
 
 
@@ -261,6 +268,19 @@ plus′ = μ′ + ⇒ ƛ′ m ⇒ ƛ′ n ⇒
   n  =  ` "n"
 ```
 Write out the definition of multiplication in the same style.
+
+```
+mul′ : Term
+mul′ = μ′ * ⇒ ƛ′ m ⇒ ƛ′ n ⇒
+  case′ m
+    [zero⇒ `zero
+    |suc m ⇒ plus′ · n · (* · m · n)
+    ]
+  where
+    * = ` "*"
+    m = ` "m"
+    n = ` "n"
+```
 
 
 ### Formal vs informal
@@ -531,6 +551,10 @@ What is the result of the following substitution?
 3. `` (ƛ "y" ⇒ `zero · (ƛ "x" ⇒ ` "x")) ``
 4. `` (ƛ "y" ⇒ `zero · (ƛ "x" ⇒ `zero)) ``
 
+```
+-- 3
+```
+
 
 #### Exercise `_[_:=_]′` (stretch)
 
@@ -541,7 +565,23 @@ clauses into a single function, defined by mutual recursion with
 substitution.
 
 ```
--- Your code goes here
+_[¿_¿_:=_]′ : Term → Id → Id → Term → Term
+_[_:=_]′ : Term → Id → Term → Term
+
+T [¿ x ¿ y := V ]′ with x ≟ y
+... | yes _ = T
+... | no  _ = T [ y := V ]′
+
+(` x)                          [ y := V ]′
+  with x ≟ y
+...  | yes _                                =  V
+...  | no  _                                =  ` x
+(ƛ x ⇒ N)                      [ y := V ]′  =  ƛ x ⇒ N [¿ x ¿ y := V ]′
+(L · M)                        [ y := V ]′  =  L [ y := V ]′ · M [ y := V ]′
+(`zero)                        [ y := V ]′  =  `zero
+(`suc M)                       [ y := V ]′  =  `suc M [ y := V ]′
+(case L [zero⇒ M |suc x ⇒ N ]) [ y := V ]′  =  case L [ y := V ]′ [zero⇒ M [ y := V ]′ |suc x ⇒ N [¿ x ¿ y := V ]′ ]
+(μ x ⇒ N)                      [ y := V ]′  =  μ x ⇒ N [¿ x ¿ y := V ]′
 ```
 
 
@@ -687,6 +727,12 @@ defined above.)
 2.  `` (ƛ "z" ⇒ sucᶜ · (sucᶜ · ` "z")) · `zero ``
 3.  `` `zero ``
 
+```
+-- 1
+-- 2
+-- 2
+```
+
 
 ## Reflexive and transitive closure
 
@@ -765,7 +811,51 @@ Show that the first notion of reflexive and transitive closure
 above embeds into the second. Why are they not isomorphic?
 
 ```
--- Your code goes here
+open Relation.Binary.PropositionalEquality using (cong)
+open import plfa.part1.Isomorphism using (_≲_)
+
+—↠-trans : ∀ {M N L}
+  → M —↠ N
+  → N —↠ L
+    ---------
+  → M —↠ L
+—↠-trans (_ ∎)            N—↠L = N—↠L
+—↠-trans (_ —→⟨ x ⟩ M—↠N) N—↠L = _ —→⟨ x ⟩ (—↠-trans M—↠N N—↠L)
+
+—↠≲—↠′ : ∀ {M N}
+  → M —↠ N ≲ M —↠′ N
+—↠≲—↠′ =
+  record
+    { to      = to
+    ; from    = from
+    ; from∘to = from∘to
+    }
+  where
+    to : ∀ {M N}
+      → M —↠ N → M —↠′ N
+    to (_ ∎)                                = refl′
+    to (_ —→⟨ M—→M′ ⟩ _ ∎)                  = step′ M—→M′
+    to (_ —→⟨ M—→M′ ⟩ _ —→⟨ M′—→M″ ⟩ M″—↠N) = trans′ (step′ M—→M′) (to (_ —→⟨ M′—→M″ ⟩ M″—↠N))
+
+    from : ∀ {M N}
+      → M —↠′ N → M —↠ N
+    from {M}  {N} (step′ M—→N)           = M —→⟨ M—→N ⟩ N ∎
+    from {M} .{M} refl′                  = M ∎
+    from          (trans′ M—↠′M′ M′—↠′N) = —↠-trans (from M—↠′M′) (from M′—↠′N)
+
+    from∘to : ∀ {M N} (M—↠N : M —↠ N)
+      → from (to M—↠N) ≡ M—↠N
+    from∘to (_ ∎)                                = refl
+    from∘to (M —→⟨ M-→M′ ⟩ _ ∎)                  = refl
+    from∘to (M —→⟨ M-→M′ ⟩ _ —→⟨ M′—→M″ ⟩ M″—↠N) = cong (M —→⟨ M-→M′ ⟩_) (from∘to (_ —→⟨ M′—→M″ ⟩ M″—↠N))
+
+-- `to∘from` does not work because of `refl′` and `trans′`.
+-- With those two, we can instantiate `M —↠′ M` in multiple
+-- ways, including `refl′`, `trans′ refl′ refl′`,
+-- `trans′ refl′ (trans′ refl′ refl′)`, etc.
+-- However, there is only one way to instantiate `M —↠ M`,
+-- namely, `M ∎`, so we cannot have injective `from`, thus
+-- we cannot show `to∘from`.
 ```
 
 ## Confluence
@@ -793,16 +883,16 @@ step and the bottom two stand for zero or more reduction
 steps it is called the diamond property. In symbols:
 
 ```
-postulate
-  confluence : ∀ {L M N}
-    → ((L —↠ M) × (L —↠ N))
-      --------------------
-    → ∃[ P ] ((M —↠ P) × (N —↠ P))
+-- postulate
+--   confluence : ∀ {L M N}
+--     → ((L —↠ M) × (L —↠ N))
+--       --------------------
+--     → ∃[ P ] ((M —↠ P) × (N —↠ P))
 
-  diamond : ∀ {L M N}
-    → ((L —→ M) × (L —→ N))
-      --------------------
-    → ∃[ P ] ((M —↠ P) × (N —↠ P))
+--   diamond : ∀ {L M N}
+--     → ((L —→ M) × (L —→ N))
+--       --------------------
+--     → ∃[ P ] ((M —↠ P) × (N —↠ P))
 ```
 
 The reduction system studied in this chapter is deterministic.
@@ -820,6 +910,33 @@ postulate
 It is easy to show that every deterministic relation satisfies
 the diamond and confluence properties. Hence, all the reduction
 systems studied in this text are trivially confluent.
+
+```
+open Data.Product using (_,_)
+
+confluence : ∀ {L M N}
+  → ((L —↠ M) × (L —↠ N))
+    --------------------
+  → ∃[ P ] ((M —↠ P) × (N —↠ P))
+confluence ((_ ∎)                 , (_ ∎))                 = _ , (_ ∎) , (_ ∎)
+confluence ((_ ∎)                 , (_ —→⟨ L—→N′ ⟩ N′—↠N)) = _ , (_ —→⟨ L—→N′ ⟩ N′—↠N) , (_ ∎)
+confluence ((_ —→⟨ L—→M′ ⟩ M′—↠M) , (_ ∎))                 = _ , (_ ∎) , (_ —→⟨ L—→M′ ⟩ M′—↠M)
+confluence ((_ —→⟨ L—→M′ ⟩ M′—↠M) , (_ —→⟨ L—→N′ ⟩ N′—↠N)) =
+  helper (deterministic L—→M′ L—→N′) (M′—↠M , N′—↠N)
+  where
+    helper : ∀ {M′ N′ M N}
+      → M′ ≡ N′
+      → ((M′ —↠ M) × (N′ —↠ N))
+        --------------------
+      → ∃[ P ] ((M —↠ P) × (N —↠ P))
+    helper refl = confluence
+
+diamond : ∀ {L M N}
+  → ((L —→ M) × (L —→ N))
+    --------------------
+  → ∃[ P ] ((M —↠ P) × (N —↠ P))
+diamond (L—→M , L—→N) rewrite deterministic L—→M L—→N = _ , (_ ∎) , (_ ∎)
+```
 
 
 ## Examples
@@ -930,7 +1047,36 @@ In the next chapter, we will see how to compute such reduction sequences.
 Write out the reduction sequence demonstrating that one plus one is two.
 
 ```
--- Your code goes here
+one : Term
+one = `suc `zero
+
+_ : plus · one · one —↠ two
+_ =
+  begin
+    plus · one · one
+  —→⟨ ξ-·₁ (ξ-·₁ β-μ) ⟩
+    (ƛ "m" ⇒
+     (ƛ "n" ⇒
+      case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (plus · ` "m" · ` "n") ])) · one · one
+  —→⟨ ξ-·₁ (β-ƛ (V-suc V-zero)) ⟩
+    (ƛ "n" ⇒
+     case one [zero⇒ ` "n" |suc "m" ⇒ `suc (plus · ` "m" · ` "n") ]) · one
+  —→⟨ β-ƛ (V-suc V-zero) ⟩
+    case one [zero⇒ one |suc "m" ⇒ `suc (plus · ` "m" · one) ]
+  —→⟨ β-suc V-zero ⟩
+    `suc (plus · `zero · one)
+  —→⟨ ξ-suc (ξ-·₁ (ξ-·₁ β-μ)) ⟩
+    `suc ((ƛ "m" ⇒
+           (ƛ "n" ⇒
+            case ` "m" [zero⇒ ` "n" |suc "m" ⇒ `suc (plus · ` "m" · ` "n") ])) · `zero · one)
+  —→⟨ ξ-suc (ξ-·₁ (β-ƛ V-zero)) ⟩
+    `suc ((ƛ "n" ⇒
+           case `zero [zero⇒ ` "n" |suc "m" ⇒ `suc (plus · ` "m" · ` "n") ]) · one)
+  —→⟨ ξ-suc (β-ƛ (V-suc V-zero)) ⟩
+    `suc (case `zero [zero⇒ one |suc "m" ⇒ `suc (plus · ` "m" · one) ])
+  —→⟨ ξ-suc β-zero ⟩
+    two
+  ∎
 ```
 
 
@@ -995,6 +1141,11 @@ Thus:
 
   Give more than one answer if appropriate.
 
+```
+-- 2
+-- 6
+```
+
 
 ## Typing
 
@@ -1038,7 +1189,34 @@ to the list
     [ ⟨ "z" , `ℕ ⟩ , ⟨ "s" , `ℕ ⇒ `ℕ ⟩ ]
 
 ```
--- Your code goes here
+open plfa.part1.Isomorphism using (_≃_)
+
+Context-≃ : Context ≃ List (Id × Type)
+Context-≃ =
+  record
+    { to      = to
+    ; from    = from
+    ; from∘to = from∘to
+    ; to∘from = to∘from
+    }
+  where
+    to : Context → List (Id × Type)
+    to ∅           = []
+    to (c , x ⦂ t) = (x , t) ∷ to c
+
+    from : List (Id × Type) → Context
+    from []            = ∅
+    from ((x , t) ∷ l) = from l , x ⦂ t
+
+    from∘to : ∀ (c : Context)
+      → from (to c) ≡ c
+    from∘to ∅           = refl
+    from∘to (c , x ⦂ t) = cong (_, x ⦂ t) (from∘to c)
+
+    to∘from : ∀ (l : List (Id × Type))
+      → to (from l) ≡ l
+    to∘from []            = refl
+    to∘from ((x , t) ∷ l) = cong ((x , t) ∷_) (to∘from l)
 ```
 
 ### Lookup judgment
@@ -1387,6 +1565,15 @@ or explain why there are no such types.
 1. `` ∅ , "x" ⦂ A ⊢ ` "x" · ` "x" ⦂ B ``
 2. `` ∅ , "x" ⦂ A , "y" ⦂ B ⊢ ƛ "z" ⇒ ` "x" · (` "y" · ` "z") ⦂ C ``
 
+```
+-- `` `ℕ ``
+-- There's none (`` `ℕ `` cannot be applied as an abstraction)
+-- `` `ℕ ⇒ `ℕ ``
+
+-- There's none (This requires `` A ⇒ B ≡ A ``)
+-- `` `ℕ ⇒ `ℕ ``, `` `ℕ ⇒ `ℕ ``, `` `ℕ ⇒ `ℕ `` (or `Y ⇒ X`, `Z ⇒ Y`, `Z ⇒ X` for any other `X`, `Y`, `Z`)
+```
+
 
 #### Exercise `⊢mul` (recommended)
 
@@ -1394,7 +1581,14 @@ Using the term `mul` you defined earlier, write out the derivation
 showing that it is well typed.
 
 ```
--- Your code goes here
+⊢mul : ∀ {Γ} → Γ ⊢ mul ⦂ `ℕ ⇒ `ℕ ⇒ `ℕ
+⊢mul = ⊢μ (⊢ƛ (⊢ƛ
+  (⊢case (⊢` ∋m) ⊢zero (⊢plus · ⊢` ∋n · (⊢` ∋* · ⊢` ∋m′ · ⊢` ∋n)))))
+  where
+    ∋m = S′ Z
+    ∋n = S′ Z
+    ∋* = S′ (S′ (S′ Z))
+    ∋m′ = Z
 ```
 
 
@@ -1404,7 +1598,14 @@ Using the term `mulᶜ` you defined earlier, write out the derivation
 showing that it is well typed.
 
 ```
--- Your code goes here
+⊢mulᶜ : ∀ {Γ A} → Γ ⊢ mulᶜ ⦂ Ch A ⇒ Ch A ⇒ Ch A
+⊢mulᶜ = ⊢ƛ (⊢ƛ (⊢ƛ (⊢ƛ
+  (⊢` ∋m · (⊢` ∋n · ⊢` ∋s) · ⊢` ∋z))))
+  where
+    ∋m = S′ (S′ (S′ Z))
+    ∋n = S′ (S′ Z)
+    ∋s = S′ Z
+    ∋z = Z
 ```
 
 
