@@ -512,7 +512,8 @@ two natural numbers, now adapted to the intrinsically-typed
 DeBruijn representation.
 
 ```
--- Your code goes here
+mul : ∀ {Γ} → Γ ⊢ `ℕ ⇒ `ℕ ⇒ `ℕ
+mul = μ ƛ ƛ case (# 1) (# 0) (# 3 · # 0 · # 1)
 ```
 
 
@@ -999,7 +1000,13 @@ not reduce, and its corollary, terms that reduce are not
 values.
 
 ```
--- Your code goes here
+V¬—→ : ∀ {Γ A} {M N : Γ ⊢ A}
+  → Value M
+    -------
+  → ¬ (M —→ N)
+V¬—→ V-ƛ        ()
+V¬—→ V-zero     ()
+V¬—→ (V-suc VM) (ξ-suc M—→N) = V¬—→ VM M—→N
 ```
 
 ## Progress
@@ -1355,7 +1362,88 @@ tedious and almost identical to the previous proof.
 Using the evaluator, confirm that two times two is four.
 
 ```
--- Your code goes here
+2*2 : ∀ {Γ} → Γ ⊢ `ℕ
+2*2 = mul · two · two
+
+mul-example : eval (gas 40) 2*2 ≡
+  steps
+  ((μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+   · `suc (`suc `zero)
+   · `suc (`suc `zero)
+   —→⟨ ξ-·₁ (ξ-·₁ β-μ) ⟩
+   (ƛ
+    (ƛ
+     case (` (S Z)) (` Z)
+     ((μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+      · ` Z
+      · ` (S Z))))
+   · `suc (`suc `zero)
+   · `suc (`suc `zero)
+   —→⟨ ξ-·₁ (β-ƛ (V-suc (V-suc V-zero))) ⟩
+   (ƛ
+    case (`suc (`suc `zero)) (` Z)
+    ((μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+     · ` Z
+     · ` (S Z)))
+   · `suc (`suc `zero)
+   —→⟨ β-ƛ (V-suc (V-suc V-zero)) ⟩
+   case (`suc (`suc `zero)) (`suc (`suc `zero))
+   ((μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+    · ` Z
+    · `suc (`suc `zero))
+   —→⟨ β-suc (V-suc V-zero) ⟩
+   (μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+   · `suc `zero
+   · `suc (`suc `zero)
+   —→⟨ ξ-·₁ (ξ-·₁ β-μ) ⟩
+   (ƛ
+    (ƛ
+     case (` (S Z)) (` Z)
+     ((μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+      · ` Z
+      · ` (S Z))))
+   · `suc `zero
+   · `suc (`suc `zero)
+   —→⟨ ξ-·₁ (β-ƛ (V-suc V-zero)) ⟩
+   (ƛ
+    case (`suc `zero) (` Z)
+    ((μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+     · ` Z
+     · ` (S Z)))
+   · `suc (`suc `zero)
+   —→⟨ β-ƛ (V-suc (V-suc V-zero)) ⟩
+   case (`suc `zero) (`suc (`suc `zero))
+   ((μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+    · ` Z
+    · `suc (`suc `zero))
+   —→⟨ β-suc V-zero ⟩
+   (μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+   · `zero
+   · `suc (`suc `zero)
+   —→⟨ ξ-·₁ (ξ-·₁ β-μ) ⟩
+   (ƛ
+    (ƛ
+     case (` (S Z)) (` Z)
+     ((μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+      · ` Z
+      · ` (S Z))))
+   · `zero
+   · `suc (`suc `zero)
+   —→⟨ ξ-·₁ (β-ƛ V-zero) ⟩
+   (ƛ
+    case `zero (` Z)
+    ((μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+     · ` Z
+     · ` (S Z)))
+   · `suc (`suc `zero)
+   —→⟨ β-ƛ (V-suc (V-suc V-zero)) ⟩
+   case `zero (`suc (`suc `zero))
+   ((μ (ƛ (ƛ case (` (S Z)) (` Z) (` (S (S (S Z))) · ` Z · ` (S Z)))))
+    · ` Z
+    · `suc (`suc `zero))
+   —→⟨ β-zero ⟩ `suc (`suc `zero) ∎)
+  (done (V-suc (V-suc V-zero)))
+mul-example = refl
 ```
 
 
