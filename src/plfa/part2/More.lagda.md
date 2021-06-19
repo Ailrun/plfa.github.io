@@ -592,6 +592,12 @@ data Type : Set where
   _⇒_   : Type → Type → Type
   Nat   : Type
   _`×_  : Type → Type → Type
+-- begin
+  _`⊎_  : Type → Type → Type
+  `⊤    : Type
+  `⊥    : Type
+  `List : Type → Type
+-- end
 ```
 
 ### Contexts
@@ -714,6 +720,66 @@ data _⊢_ : Context → Type → Set where
       --------------
     → Γ ⊢ C
 
+-- begin
+  -- sums
+
+  `inj₁ : ∀ {Γ A B}
+    → Γ ⊢ A
+      -----------
+    → Γ ⊢ A `⊎ B
+
+  `inj₂ : ∀ {Γ A B}
+    → Γ ⊢ B
+      -----------
+    → Γ ⊢ A `⊎ B
+
+  case⊎ : ∀ {Γ A B C}
+    → Γ ⊢ A `⊎ B
+    → Γ , A ⊢ C
+    → Γ , B ⊢ C
+      -----------
+    → Γ ⊢ C
+
+  -- unit type
+
+  `tt : ∀ {Γ}
+      -------
+    → Γ ⊢ `⊤
+
+  -- alternative formulation of unit type
+
+  case⊤ : ∀ {Γ A}
+    → Γ ⊢ `⊤
+    → Γ ⊢ A
+      ------
+    → Γ ⊢ A
+
+  -- empty type
+
+  case⊥ : ∀ {Γ A}
+    → Γ ⊢ `⊥
+      -------
+    → Γ ⊢ A
+
+  -- lists
+
+  `[] : ∀ {Γ A}
+      ------------
+    → Γ ⊢ `List A
+
+  _`∷_ : ∀ {Γ A}
+    → Γ ⊢ A
+    → Γ ⊢ `List A
+      ------------
+    → Γ ⊢ `List A
+
+  caseL : ∀ {Γ A B}
+    → Γ ⊢ `List A
+    → Γ ⊢ B
+    → Γ , A , `List A ⊢ B
+      --------------------
+    → Γ ⊢ B
+-- end
 ```
 
 ### Abbreviating de Bruijn indices
@@ -767,6 +833,17 @@ rename ρ `⟨ M , N ⟩     =  `⟨ rename ρ M , rename ρ N ⟩
 rename ρ (`proj₁ L)     =  `proj₁ (rename ρ L)
 rename ρ (`proj₂ L)     =  `proj₂ (rename ρ L)
 rename ρ (case× L M)    =  case× (rename ρ L) (rename (ext (ext ρ)) M)
+-- begin
+rename ρ (`inj₁ M)      =  `inj₁ (rename ρ M)
+rename ρ (`inj₂ N)      =  `inj₂ (rename ρ N)
+rename ρ (case⊎ L M N)  =  case⊎ (rename ρ L) (rename (ext ρ) M) (rename (ext ρ) N)
+rename ρ `tt            =  `tt
+rename ρ (case⊤ L M)    =  case⊤ (rename ρ L) (rename ρ M)
+rename ρ (case⊥ L)      =  case⊥ (rename ρ L)
+rename ρ `[]            =  `[]
+rename ρ (M `∷ N)       =  rename ρ M `∷ rename ρ N
+rename ρ (caseL L M N)  =  caseL (rename ρ L) (rename ρ M) (rename (ext (ext ρ)) N)
+-- end
 ```
 
 ## Simultaneous Substitution
@@ -791,6 +868,17 @@ subst σ `⟨ M , N ⟩     =  `⟨ subst σ M , subst σ N ⟩
 subst σ (`proj₁ L)     =  `proj₁ (subst σ L)
 subst σ (`proj₂ L)     =  `proj₂ (subst σ L)
 subst σ (case× L M)    =  case× (subst σ L) (subst (exts (exts σ)) M)
+-- begin
+subst σ (`inj₁ M)      =  `inj₁ (subst σ M)
+subst σ (`inj₂ N)      =  `inj₂ (subst σ N)
+subst σ (case⊎ L M N)  =  case⊎ (subst σ L) (subst (exts σ) M) (subst (exts σ) N)
+subst σ `tt            =  `tt
+subst σ (case⊤ L M)    =  case⊤ (subst σ L) (subst σ M)
+subst σ (case⊥ L)      =  case⊥ (subst σ L)
+subst σ `[]            =  `[]
+subst σ (M `∷ N)       =  subst σ M `∷ subst σ N
+subst σ (caseL L M N)  =  caseL (subst σ L) (subst σ M) (subst (exts (exts σ)) N)
+-- end
 ```
 
 ## Single and double substitution
@@ -856,6 +944,38 @@ data Value : ∀ {Γ A} → Γ ⊢ A → Set where
     → Value W
       ----------------
     → Value `⟨ V , W ⟩
+
+-- begin
+  -- sums
+
+  V-inj₁ : ∀ {Γ A B} {V : Γ ⊢ A}
+    → Value V
+      ----------------
+    → Value (`inj₁ {B = B} V)
+
+  V-inj₂ : ∀ {Γ A B} {W : Γ ⊢ B}
+    → Value W
+      ----------------
+    → Value (`inj₂ {A = A} W)
+
+  -- unit type
+
+  V-tt : ∀ {Γ}
+      ----------
+    → Value (`tt {Γ = Γ})
+
+  -- lists
+
+  V-[] : ∀ {Γ A}
+      ---------
+    → Value (`[] {Γ = Γ} {A = A})
+
+  V-∷ : ∀ {Γ A} {V : Γ ⊢ A} {W : Γ ⊢ `List A}
+    → Value V
+    → Value W
+      ---------------
+    → Value (V `∷ W)
+-- end
 ```
 
 Implicit arguments need to be supplied when they are
@@ -990,6 +1110,80 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
       ----------------------------------
     → case× `⟨ V , W ⟩ M —→ M [ V ][ W ]
 
+-- begin
+  -- sums
+
+  ξ-inj₁ : ∀ {Γ A B} {M M′ : Γ ⊢ A}
+    → M —→ M′
+      ------------------------------------
+    → `inj₁ {B = B} M —→ `inj₁ {B = B} M′
+
+  ξ-inj₂ : ∀ {Γ A B} {N N′ : Γ ⊢ B}
+    → N —→ N′
+      ------------------------------------
+    → `inj₂ {A = A} N —→ `inj₂ {A = A} N′
+
+  ξ-case⊎ : ∀ {Γ A B C} {L L′ : Γ ⊢ A `⊎ B} {M : Γ , A ⊢ C} {N : Γ , B ⊢ C}
+    → L —→ L′
+      ----------------------------
+    → case⊎ L M N —→ case⊎ L′ M N
+
+  β-inj₁ : ∀ {Γ A B C} {V : Γ ⊢ A} {M : Γ , A ⊢ C} {N : Γ , B ⊢ C}
+    → Value V
+      ----------------------------
+    → case⊎ (`inj₁ V) M N —→ M [ V ]
+
+  β-inj₂ : ∀ {Γ A B C} {W : Γ ⊢ B} {M : Γ , A ⊢ C} {N : Γ , B ⊢ C}
+    → Value W
+      ----------------------------
+    → case⊎ (`inj₂ W) M N —→ N [ W ]
+
+  -- alternative formulation of unit type
+
+  ξ-case⊤ : ∀ {Γ A} {L L′ : Γ ⊢ `⊤} {M : Γ ⊢ A}
+    → L —→ L′
+      ----------------------------
+    → case⊤ L M —→ case⊤ L′ M
+
+  β-case⊤ : ∀ {Γ A} {M : Γ ⊢ A}
+      ----------------------------
+    → case⊤ `tt M —→ M
+
+  -- empty type
+
+  ξ-case⊥ : ∀ {Γ A} {L L′ : Γ ⊢ `⊥}
+    → L —→ L′
+      ----------------------------
+    → case⊥ {A = A} L —→ case⊥ {A = A} L′
+
+  -- lists
+
+  ξ-∷₁ : ∀ {Γ A} {M M′ : Γ ⊢ A} {N : Γ ⊢ `List A}
+    → M —→ M′
+      ----------------------------
+    → M `∷ N —→ M′ `∷ N
+
+  ξ-∷₂ : ∀ {Γ A} {V : Γ ⊢ A} {N N′ : Γ ⊢ `List A}
+    → Value V
+    → N —→ N′
+      ----------------------------
+    → V `∷ N —→ V `∷ N′
+
+  ξ-caseL : ∀ {Γ A B} {L L′ : Γ ⊢ `List A} {M : Γ ⊢ B} {N : Γ , A , `List A ⊢ B}
+    → L —→ L′
+      ----------------------------
+    → caseL L M N —→ caseL L′ M N
+
+  β-[] : ∀ {Γ A B} {M : Γ ⊢ B} {N : Γ , A , `List A ⊢ B}
+      ----------------------------
+    → caseL `[] M N —→ M
+
+  β-∷ : ∀ {Γ A B} {V : Γ ⊢ A} {W : Γ ⊢ `List A} {M : Γ ⊢ B} {N : Γ , A , `List A ⊢ B}
+    → Value V
+    → Value W
+      ----------------------------
+    → caseL (V `∷ W) M N —→ N [ V ][ W ]
+-- end
 ```
 
 ## Reflexive and transitive closure
@@ -1033,6 +1227,14 @@ V¬—→ (V-suc VM)   (ξ-suc M—→M′)     =  V¬—→ VM M—→M′
 V¬—→ V-con        ()
 V¬—→ V-⟨ VM , _ ⟩ (ξ-⟨,⟩₁ M—→M′)    =  V¬—→ VM M—→M′
 V¬—→ V-⟨ _ , VN ⟩ (ξ-⟨,⟩₂ _ N—→N′)  =  V¬—→ VN N—→N′
+-- begin
+V¬—→ (V-inj₁ VM)  (ξ-inj₁ M—→M′)    =  V¬—→ VM M—→M′
+V¬—→ (V-inj₂ VN)  (ξ-inj₂ N—→N′)    =  V¬—→ VN N—→N′
+V¬—→ V-tt         ()
+V¬—→ V-[]         ()
+V¬—→ (V-∷ VM VN)  (ξ-∷₁ M—→M′)      =  V¬—→ VM M—→M′
+V¬—→ (V-∷ VM VN)  (ξ-∷₂ _ N—→N′)    =  V¬—→ VN N—→N′
+-- end
 ```
 
 
@@ -1094,6 +1296,34 @@ progress (`proj₂ L) with progress L
 progress (case× L M) with progress L
 ...    | step L—→L′                         =  step (ξ-case× L—→L′)
 ...    | done (V-⟨ VM , VN ⟩)               =  step (β-case× VM VN)
+-- begin
+progress (`inj₁ M) with progress M
+...    | step M—→M′                         =  step (ξ-inj₁ M—→M′)
+...    | done VM                            =  done (V-inj₁ VM)
+progress (`inj₂ N) with progress N
+... | step N—→N′                            =  step (ξ-inj₂ N—→N′)
+... | done VN                               =  done (V-inj₂ VN)
+progress (case⊎ L M N) with progress L
+... | step L—→L′                            =  step (ξ-case⊎ L—→L′)
+... | done (V-inj₁ VV)                      =  step (β-inj₁ VV)
+... | done (V-inj₂ VW)                      =  step (β-inj₂ VW)
+progress `tt                                =  done V-tt
+progress (case⊤ L N)  with progress L
+... | step L—→L′                            =  step (ξ-case⊤ L—→L′)
+... | done V-tt                             =  step β-case⊤
+progress (case⊥ L) with progress L
+... | step L—→L′                            =  step (ξ-case⊥ L—→L′)
+progress `[]                                =  done V-[]
+progress (M `∷ N) with progress M
+... | step M—→M′                            =  step (ξ-∷₁ M—→M′)
+... | done VM with progress N
+...   | step N—→N′                          =  step (ξ-∷₂ VM N—→N′)
+...   | done VN                             =  done (V-∷ VM VN)
+progress (caseL L M N) with progress L
+... | step L—→L′                            =  step (ξ-caseL L—→L′)
+... | done V-[]                             =  step β-[]
+... | done (V-∷ VV VW)                      =  step (β-∷ VV VW)
+-- end
 ```
 
 
@@ -1236,14 +1466,456 @@ Please delimit any code you add as follows:
 Show that a double substitution is equivalent to two single
 substitutions.
 ```
-postulate
-  double-subst :
-    ∀ {Γ A B C} {V : Γ ⊢ A} {W : Γ ⊢ B} {N : Γ , A , B ⊢ C} →
-      N [ V ][ W ] ≡ (N [ rename S_ W ]) [ V ]
+-- postulate
+--   double-subst :
+--     ∀ {Γ A B C} {V : Γ ⊢ A} {W : Γ ⊢ B} {N : Γ , A , B ⊢ C} →
+--       N [ V ][ W ] ≡ (N [ rename S_ W ]) [ V ]
 ```
 Note the arguments need to be swapped and `W` needs to have
 its context adjusted via renaming in order for the right-hand
 side to be well typed.
+
+```
+open import Function using (_∘_)
+open Eq using (cong; cong₂; cong-app; sym; trans)
+open import plfa.part1.Isomorphism using (extensionality; ∀-extensionality)
+module EqR = Eq.≡-Reasoning using (begin_; _≡⟨⟩_; step-≡; _∎)
+
+implicit-extensionality : ∀ {A : Set} {B : A → Set} {f g : {x : A} → B x} →
+  (∀ {x} → f {x} ≡ g {x}) → (λ {x} → f {x}) ≡ (λ {x} → g {x})
+implicit-extensionality = helper ∀-extensionality
+  where
+    open import Axiom.Extensionality.Propositional
+      using ()
+      renaming (implicit-extensionality to helper)
+
+cong₃ : ∀ {A B C D : Set} (f : A → B → C → D) {x y u v w z}
+  → x ≡ y
+  → u ≡ v
+  → w ≡ z
+  → f x u w ≡ f y v z
+cong₃ f refl refl refl = refl
+
+cong-ext : ∀ {Γ₁ Γ₂} {f : ∀ {C} → Γ₁ ∋ C → Γ₂ ∋ C} {g : ∀ {D} → Γ₁ ∋ D → Γ₂ ∋ D}
+  → (∀ {A} → f {A} ≡ g {A})
+  → (∀ {A B} → ext f {A} {B} ≡ ext g)
+cong-ext f≡g = cong (λ s → ext (λ {A} → s {A})) (implicit-extensionality f≡g)
+
+cong-rename : ∀ {Γ₁ Γ₂} {f : ∀ {C} → Γ₁ ∋ C → Γ₂ ∋ C} {g : ∀ {D} → Γ₁ ∋ D → Γ₂ ∋ D}
+  → (∀ {A} → f {A} ≡ g {A})
+  → (∀ {A} → rename f {A} ≡ rename g)
+cong-rename f≡g = cong (λ s → rename (λ {A} → s {A})) (implicit-extensionality f≡g)
+
+cong-exts : ∀ {Γ₁ Γ₂} {f : ∀ {C} → Γ₁ ∋ C → Γ₂ ⊢ C} {g : ∀ {D} → Γ₁ ∋ D → Γ₂ ⊢ D}
+  → (∀ {A} → f {A} ≡ g {A})
+  → (∀ {A B} → exts f {A} {B} ≡ exts g)
+cong-exts f≡g = cong (λ s → exts (λ {A} → s {A})) (implicit-extensionality f≡g)
+
+cong-subst : ∀ {Γ₁ Γ₂} {f : ∀ {C} → Γ₁ ∋ C → Γ₂ ⊢ C} {g : ∀ {D} → Γ₁ ∋ D → Γ₂ ⊢ D}
+  → (∀ {A} → f {A} ≡ g {A})
+  → (∀ {A} → subst f {A} ≡ subst g)
+cong-subst f≡g = cong (λ s → subst (λ {A} → s {A})) (implicit-extensionality f≡g)
+
+ext-ext-compose : ∀ {Γ₁ Γ₂ Γ₃}
+  → (ρ₁ : ∀ {C} → Γ₁ ∋ C → Γ₂ ∋ C)
+  → (ρ₂ : ∀ {D} → Γ₂ ∋ D → Γ₃ ∋ D)
+  → (∀ {A B} → ext ρ₂ ∘ ext ρ₁ {A} {B} ≡ ext (ρ₂ ∘ ρ₁))
+ext-ext-compose {Γ₁ = Γ₁} ρ₁ ρ₂ = extensionality helper
+  where
+    helper : ∀ {A B} (X : Γ₁ , A ∋ B)
+      → (ext ρ₂ ∘ ext ρ₁) X ≡ ext (ρ₂ ∘ ρ₁) X
+    helper Z     = refl
+    helper (S X) = refl
+
+rename-compose : ∀ {Γ₁ Γ₂ Γ₃}
+  → (ρ₁ : ∀ {B} → Γ₁ ∋ B → Γ₂ ∋ B)
+  → (ρ₂ : ∀ {C} → Γ₂ ∋ C → Γ₃ ∋ C)
+  → (∀ {A} → rename ρ₂ ∘ rename ρ₁ {A} ≡ rename (ρ₂ ∘ ρ₁))
+rename-compose ρ₁ ρ₂ = extensionality (helper ρ₁ ρ₂)
+  where
+    helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (ρ₁ : ∀ {B} → Γ₁ ∋ B → Γ₂ ∋ B)
+      → (ρ₂ : ∀ {C} → Γ₂ ∋ C → Γ₃ ∋ C)
+      → (∀ {A} (X : Γ₁ ⊢ A) → (rename ρ₂ ∘ rename ρ₁) X ≡ rename (ρ₂ ∘ ρ₁) X)
+    ext-helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (ρ₁ : ∀ {C} → Γ₁ ∋ C → Γ₂ ∋ C)
+      → (ρ₂ : ∀ {D} → Γ₂ ∋ D → Γ₃ ∋ D)
+      → (∀ {A B} (X : Γ₁ , A ⊢ B) → (rename (ext ρ₂) ∘ rename (ext ρ₁)) X ≡ rename (ext (ρ₂ ∘ ρ₁)) X)
+    extext-helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (ρ₁ : ∀ {D} → Γ₁ ∋ D → Γ₂ ∋ D)
+      → (ρ₂ : ∀ {E} → Γ₂ ∋ E → Γ₃ ∋ E)
+      → (∀ {A B C} (X : Γ₁ , A , B ⊢ C) → (rename (ext (ext ρ₂)) ∘ rename (ext (ext ρ₁))) X ≡ rename (ext (ext (ρ₂ ∘ ρ₁))) X)
+
+    helper ρ₁ ρ₂ (` x)           = refl
+    helper ρ₁ ρ₂ (ƛ X)           = cong ƛ_ (ext-helper ρ₁ ρ₂ X)
+    helper ρ₁ ρ₂ (X · X₁)        = cong₂ _·_ (helper ρ₁ ρ₂ X) (helper ρ₁ ρ₂ X₁)
+    helper ρ₁ ρ₂ `zero           = refl
+    helper ρ₁ ρ₂ (`suc X)        = cong `suc_ (helper ρ₁ ρ₂ X)
+    helper ρ₁ ρ₂ (case X X₁ X₂)  = cong₃ case (helper ρ₁ ρ₂ X) (helper ρ₁ ρ₂ X₁) (ext-helper ρ₁ ρ₂ X₂)
+    helper ρ₁ ρ₂ (μ X)           = cong μ_ (ext-helper ρ₁ ρ₂ X)
+    helper ρ₁ ρ₂ (con x)         = refl
+    helper ρ₁ ρ₂ (X `* X₁)       = cong₂ _`*_ (helper ρ₁ ρ₂ X) (helper ρ₁ ρ₂ X₁)
+    helper ρ₁ ρ₂ (`let X X₁)     = cong₂ `let (helper ρ₁ ρ₂ X) (ext-helper ρ₁ ρ₂ X₁)
+    helper ρ₁ ρ₂ `⟨ X , X₁ ⟩     = cong₂ `⟨_,_⟩ (helper ρ₁ ρ₂ X) (helper ρ₁ ρ₂ X₁)
+    helper ρ₁ ρ₂ (`proj₁ X)      = cong `proj₁ (helper ρ₁ ρ₂ X)
+    helper ρ₁ ρ₂ (`proj₂ X)      = cong `proj₂ (helper ρ₁ ρ₂ X)
+    helper ρ₁ ρ₂ (case× X X₁)    = cong₂ case× (helper ρ₁ ρ₂ X) (extext-helper ρ₁ ρ₂ X₁)
+    helper ρ₁ ρ₂ (`inj₁ X)       = cong `inj₁ (helper ρ₁ ρ₂ X)
+    helper ρ₁ ρ₂ (`inj₂ X)       = cong `inj₂ (helper ρ₁ ρ₂ X)
+    helper ρ₁ ρ₂ (case⊎ X X₁ X₂) = cong₃ case⊎ (helper ρ₁ ρ₂ X) (ext-helper ρ₁ ρ₂ X₁) (ext-helper ρ₁ ρ₂ X₂)
+    helper ρ₁ ρ₂ `tt             = refl
+    helper ρ₁ ρ₂ (case⊤ X X₁)    = cong₂ case⊤ (helper ρ₁ ρ₂ X) (helper ρ₁ ρ₂ X₁)
+    helper ρ₁ ρ₂ (case⊥ X)       = cong case⊥ (helper ρ₁ ρ₂ X)
+    helper ρ₁ ρ₂ `[]             = refl
+    helper ρ₁ ρ₂ (X `∷ X₁)       = cong₂ _`∷_ (helper ρ₁ ρ₂ X) (helper ρ₁ ρ₂ X₁)
+    helper ρ₁ ρ₂ (caseL X X₁ X₂) = cong₃ caseL (helper ρ₁ ρ₂ X) (helper ρ₁ ρ₂ X₁) (extext-helper ρ₁ ρ₂ X₂)
+
+    ext-helper ρ₁ ρ₂ X =
+      EqR.begin
+        (rename (ext ρ₂) ∘ rename (ext ρ₁)) X
+      EqR.≡⟨ helper (ext ρ₁) (ext ρ₂) X ⟩
+        rename (ext ρ₂ ∘ ext ρ₁) X
+      EqR.≡⟨ cong-app (cong-rename (ext-ext-compose ρ₁ ρ₂)) X ⟩
+        rename (ext (ρ₂ ∘ ρ₁)) X
+      EqR.∎
+
+    extext-helper ρ₁ ρ₂ X =
+      EqR.begin
+        (rename (ext (ext ρ₂)) ∘ rename (ext (ext ρ₁))) X
+      EqR.≡⟨ ext-helper (ext ρ₁) (ext ρ₂) X ⟩
+        rename (ext (ext ρ₂ ∘ ext ρ₁)) X
+      EqR.≡⟨ cong-app (cong-rename (cong-ext (ext-ext-compose ρ₁ ρ₂))) X ⟩
+        rename (ext (ext (ρ₂ ∘ ρ₁))) X
+      EqR.∎
+
+rename-ext-compose : ∀ {Γ₁ Γ₂ Γ₃}
+  → (σ : ∀ {C} → Γ₁ ∋ C → Γ₂ ⊢ C)
+  → (ρ : ∀ {D} → Γ₂ ∋ D → Γ₃ ∋ D)
+  → (∀ {A B} → rename (ext ρ) ∘ exts σ {A} {B} ≡ exts (rename ρ ∘ σ))
+rename-ext-compose {Γ₁ = Γ₁} σ ρ = extensionality helper
+  where
+    helper : ∀ {A B} (X : Γ₁ , A ∋ B)
+      → (rename (ext ρ) ∘ exts σ) X ≡ exts (rename ρ ∘ σ) X
+    helper Z     = refl
+    helper (S X) =
+      EqR.begin
+        (rename (ext ρ) ∘ exts σ) (S X)
+      EqR.≡⟨⟩
+        (rename (ext ρ) ∘ rename S_ ∘ σ) X
+      EqR.≡⟨ cong-app (cong (_∘ σ) (rename-compose S_ (ext ρ))) X ⟩
+        (rename (ext ρ ∘ S_) ∘ σ) X
+      EqR.≡⟨⟩
+        (rename (S_ ∘ ρ) ∘ σ) X
+      EqR.≡⟨ cong-app (cong (_∘ σ) (sym (rename-compose ρ S_))) X ⟩
+        (rename S_ ∘ rename ρ ∘ σ) X
+      EqR.≡⟨⟩
+        exts (rename ρ ∘ σ) (S X)
+      EqR.∎
+
+exts-ext-compose : ∀ {Γ₁ Γ₂ Γ₃}
+  → (ρ : ∀ {C} → Γ₁ ∋ C → Γ₂ ∋ C)
+  → (σ : ∀ {D} → Γ₂ ∋ D → Γ₃ ⊢ D)
+  → (∀ {A B} → exts σ ∘ ext ρ {A} {B} ≡ exts (σ ∘ ρ))
+exts-ext-compose {Γ₁ = Γ₁} ρ σ = extensionality helper
+  where
+    helper : ∀ {A B} (X : Γ₁ , A ∋ B)
+      → (exts σ ∘ ext ρ) X ≡ exts (σ ∘ ρ) X
+    helper Z     = refl
+    helper (S X) = refl
+
+subst-rename-compose : ∀ {Γ₁ Γ₂ Γ₃}
+  → (ρ : ∀ {B} → Γ₁ ∋ B → Γ₂ ∋ B)
+  → (σ : ∀ {C} → Γ₂ ∋ C → Γ₃ ⊢ C)
+  → (∀ {A} → subst σ ∘ rename ρ ≡ subst (σ ∘ ρ))
+subst-rename-compose ρ σ {A = A} = extensionality (helper ρ σ {A})
+  where
+    helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (ρ : ∀ {B} → Γ₁ ∋ B → Γ₂ ∋ B)
+      → (σ : ∀ {C} → Γ₂ ∋ C → Γ₃ ⊢ C)
+      → (∀ {A} (X : Γ₁ ⊢ A) → (subst σ ∘ rename ρ) X ≡ subst (σ ∘ ρ) X)
+    exts-helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (ρ : ∀ {C} → Γ₁ ∋ C → Γ₂ ∋ C)
+      → (σ : ∀ {D} → Γ₂ ∋ D → Γ₃ ⊢ D)
+      → (∀ {A B} (X : Γ₁ , A ⊢ B) → (subst (exts σ) ∘ rename (ext ρ)) X ≡ subst (exts (σ ∘ ρ)) X)
+    extsexts-helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (ρ : ∀ {D} → Γ₁ ∋ D → Γ₂ ∋ D)
+      → (σ : ∀ {E} → Γ₂ ∋ E → Γ₃ ⊢ E)
+      → (∀ {A B C} (X : Γ₁ , A , B ⊢ C) → (subst (exts (exts σ)) ∘ rename (ext (ext ρ))) X ≡ subst (exts (exts (σ ∘ ρ))) X)
+
+    helper ρ σ (` x)           = refl
+    helper ρ σ (ƛ X)           = cong ƛ_ (exts-helper ρ σ X)
+    helper ρ σ (X · X₁)        = cong₂ _·_ (helper ρ σ X) (helper ρ σ X₁)
+    helper ρ σ (`zero)         = refl
+    helper ρ σ (`suc X)        = cong `suc_ (helper ρ σ X)
+    helper ρ σ (case X X₁ X₂)  = cong₃ case (helper ρ σ X) (helper ρ σ X₁) (exts-helper ρ σ X₂)
+    helper ρ σ (μ X)           = cong μ_ (exts-helper ρ σ X)
+    helper ρ σ (con x)         = refl
+    helper ρ σ (X `* X₁)       = cong₂ _`*_ (helper ρ σ X) (helper ρ σ X₁)
+    helper ρ σ (`let X X₁)     = cong₂ `let (helper ρ σ X) (exts-helper ρ σ X₁)
+    helper ρ σ `⟨ X , X₁ ⟩     = cong₂ `⟨_,_⟩ (helper ρ σ X) (helper ρ σ X₁)
+    helper ρ σ (`proj₁ X)      = cong `proj₁ (helper ρ σ X)
+    helper ρ σ (`proj₂ X)      = cong `proj₂ (helper ρ σ X)
+    helper ρ σ (case× X X₁)    = cong₂ case× (helper ρ σ X) (extsexts-helper ρ σ X₁)
+    helper ρ σ (`inj₁ X)       = cong `inj₁ (helper ρ σ X)
+    helper ρ σ (`inj₂ X)       = cong `inj₂ (helper ρ σ X)
+    helper ρ σ (case⊎ X X₁ X₂) = cong₃ case⊎ (helper ρ σ X) (exts-helper ρ σ X₁) (exts-helper ρ σ X₂)
+    helper ρ σ `tt             = refl
+    helper ρ σ (case⊤ X X₁)    = cong₂ case⊤ (helper ρ σ X) (helper ρ σ X₁)
+    helper ρ σ (case⊥ X)       = cong case⊥ (helper ρ σ X)
+    helper ρ σ `[]             = refl
+    helper ρ σ (X `∷ X₁)       = cong₂ _`∷_ (helper ρ σ X) (helper ρ σ X₁)
+    helper ρ σ (caseL X X₁ X₂) = cong₃ caseL (helper ρ σ X) (helper ρ σ X₁) (extsexts-helper ρ σ X₂)
+
+    exts-helper ρ σ X =
+      EqR.begin
+        (subst (exts σ) ∘ rename (ext ρ)) X
+      EqR.≡⟨ helper (ext ρ) (exts σ) X ⟩
+        subst (exts σ ∘ ext ρ) X
+      EqR.≡⟨ cong-app (cong-subst (exts-ext-compose ρ σ)) X ⟩
+        subst (exts (σ ∘ ρ)) X
+      EqR.∎
+
+    extsexts-helper ρ σ X =
+      EqR.begin
+        (subst (exts (exts σ)) ∘ rename (ext (ext ρ))) X
+      EqR.≡⟨ exts-helper (ext ρ) (exts σ) X ⟩
+        subst (exts (exts σ ∘ ext ρ)) X
+      EqR.≡⟨ cong-app (cong-subst (cong-exts (exts-ext-compose ρ σ))) X ⟩
+        subst (exts (exts (σ ∘ ρ))) X
+      EqR.∎
+
+rename-subst-compose : ∀ {Γ₁ Γ₂ Γ₃}
+  → (σ : ∀ {B} → Γ₁ ∋ B → Γ₂ ⊢ B)
+  → (ρ : ∀ {C} → Γ₂ ∋ C → Γ₃ ∋ C)
+  → (∀ {A} → rename ρ ∘ subst σ ≡ subst (rename ρ ∘ σ))
+rename-subst-compose ρ σ {A = A} = extensionality (helper ρ σ {A})
+  where
+    helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (σ : ∀ {B} → Γ₁ ∋ B → Γ₂ ⊢ B)
+      → (ρ : ∀ {C} → Γ₂ ∋ C → Γ₃ ∋ C)
+      → (∀ {A} (X : Γ₁ ⊢ A) → (rename ρ ∘ subst σ) X ≡ subst (rename ρ ∘ σ) X)
+    exts-helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (σ : ∀ {C} → Γ₁ ∋ C → Γ₂ ⊢ C)
+      → (ρ : ∀ {D} → Γ₂ ∋ D → Γ₃ ∋ D)
+      → (∀ {A B} (X : Γ₁ , A ⊢ B) → (rename (ext ρ) ∘ subst (exts σ)) X ≡ subst (exts (rename ρ ∘ σ)) X)
+    extsexts-helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (σ : ∀ {D} → Γ₁ ∋ D → Γ₂ ⊢ D)
+      → (ρ : ∀ {E} → Γ₂ ∋ E → Γ₃ ∋ E)
+      → (∀ {A B C} (X : Γ₁ , A , B ⊢ C) → (rename (ext (ext ρ)) ∘ subst (exts (exts σ))) X ≡ subst (exts (exts (rename ρ ∘ σ))) X)
+
+    helper σ ρ (` x)           = refl
+    helper σ ρ (ƛ X)           = cong ƛ_ (exts-helper σ ρ X)
+    helper σ ρ (X · X₁)        = cong₂ _·_ (helper σ ρ X) (helper σ ρ X₁)
+    helper σ ρ `zero           = refl
+    helper σ ρ (`suc X)        = cong `suc_ (helper σ ρ X)
+    helper σ ρ (case X X₁ X₂)  = cong₃ case (helper σ ρ X) (helper σ ρ X₁) (exts-helper σ ρ X₂)
+    helper σ ρ (μ X)           = cong μ_ (exts-helper σ ρ X)
+    helper σ ρ (con x)         = refl
+    helper σ ρ (X `* X₁)       = cong₂ _`*_ (helper σ ρ X) (helper σ ρ X₁)
+    helper σ ρ (`let X X₁)     = cong₂ `let (helper σ ρ X) (exts-helper σ ρ X₁)
+    helper σ ρ `⟨ X , X₁ ⟩     = cong₂ `⟨_,_⟩ (helper σ ρ X) (helper σ ρ X₁)
+    helper σ ρ (`proj₁ X)      = cong `proj₁ (helper σ ρ X)
+    helper σ ρ (`proj₂ X)      = cong `proj₂ (helper σ ρ X)
+    helper σ ρ (case× X X₁)    = cong₂ case× (helper σ ρ X) (extsexts-helper σ ρ X₁)
+    helper σ ρ (`inj₁ X)       = cong `inj₁ (helper σ ρ X)
+    helper σ ρ (`inj₂ X)       = cong `inj₂ (helper σ ρ X)
+    helper σ ρ (case⊎ X X₁ X₂) = cong₃ case⊎ (helper σ ρ X) (exts-helper σ ρ X₁) (exts-helper σ ρ X₂)
+    helper σ ρ `tt             = refl
+    helper σ ρ (case⊤ X X₁)    = cong₂ case⊤ (helper σ ρ X) (helper σ ρ X₁)
+    helper σ ρ (case⊥ X)       = cong case⊥ (helper σ ρ X)
+    helper σ ρ `[]             = refl
+    helper σ ρ (X `∷ X₁)       = cong₂ _`∷_ (helper σ ρ X) (helper σ ρ X₁)
+    helper σ ρ (caseL X X₁ X₂) = cong₃ caseL (helper σ ρ X) (helper σ ρ X₁) (extsexts-helper σ ρ X₂)
+
+    exts-helper σ ρ X =
+      EqR.begin
+        (rename (ext ρ) ∘ subst (exts σ)) X
+      EqR.≡⟨ helper (exts σ) (ext ρ) X ⟩
+        subst (rename (ext ρ) ∘ exts σ) X
+      EqR.≡⟨ cong-app (cong-subst (rename-ext-compose σ ρ)) X ⟩
+        subst (exts (rename ρ ∘ σ)) X
+      EqR.∎
+
+    extsexts-helper σ ρ X =
+      EqR.begin
+        (rename (ext (ext ρ)) ∘ subst (exts (exts σ))) X
+      EqR.≡⟨ exts-helper (exts σ) (ext ρ) X ⟩
+        subst (exts (rename (ext ρ) ∘ exts σ)) X
+      EqR.≡⟨ cong-app (cong-subst (cong-exts (rename-ext-compose σ ρ))) X ⟩
+        subst (exts (exts (rename ρ ∘ σ))) X
+      EqR.∎
+
+subst-exts-commute : ∀ {Γ₁ Γ₂ Γ₃}
+  → (σ₁ : ∀ {C} → Γ₁ ∋ C → Γ₂ ⊢ C)
+  → (σ₂ : ∀ {D} → Γ₂ ∋ D → Γ₃ ⊢ D)
+  → (∀ {A B} → subst (exts σ₂) ∘ exts σ₁ {A} {B} ≡ exts (subst σ₂ ∘ σ₁))
+subst-exts-commute {Γ₁ = Γ₁} σ₁ σ₂ = extensionality helper
+  where
+    helper : ∀ {A B} (X : Γ₁ , B ∋ A)
+      → (subst (exts σ₂) ∘ exts σ₁) X ≡ exts (subst σ₂ ∘ σ₁) X
+    helper Z     = refl
+    helper (S X) =
+      EqR.begin
+        (subst (exts σ₂) ∘ exts σ₁) (S X)
+      EqR.≡⟨⟩
+        (subst (exts σ₂) ∘ rename S_ ∘ σ₁) X
+      EqR.≡⟨ cong-app (subst-rename-compose S_ (exts σ₂)) (σ₁ X) ⟩
+        (subst (exts σ₂ ∘ S_) ∘ σ₁) X
+      EqR.≡⟨⟩
+        (subst (rename S_ ∘ σ₂) ∘ σ₁) X
+      EqR.≡⟨ cong-app (cong (_∘ σ₁) (sym (rename-subst-compose σ₂ S_))) X ⟩
+        (rename S_ ∘ (subst σ₂ ∘ σ₁)) X
+      EqR.≡⟨⟩
+        exts (subst σ₂ ∘ σ₁) (S X)
+      EqR.∎
+
+subst-compose : ∀ {Γ₁ Γ₂ Γ₃}
+  → (σ₁ : ∀ {B} → Γ₁ ∋ B → Γ₂ ⊢ B)
+  → (σ₂ : ∀ {C} → Γ₂ ∋ C → Γ₃ ⊢ C)
+  → (∀ {A} → subst σ₂ ∘ subst σ₁ {A} ≡ subst (subst σ₂ ∘ σ₁))
+subst-compose σ₁ σ₂ = extensionality (helper σ₁ σ₂)
+  where
+    helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (σ₁ : ∀ {B} → Γ₁ ∋ B → Γ₂ ⊢ B)
+      → (σ₂ : ∀ {C} → Γ₂ ∋ C → Γ₃ ⊢ C)
+      → (∀ {A} (M : Γ₁ ⊢ A) → (subst σ₂ ∘ subst σ₁) M ≡ subst (subst σ₂ ∘ σ₁) M)
+    exts-helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (σ₁ : ∀ {C} → Γ₁ ∋ C → Γ₂ ⊢ C)
+      → (σ₂ : ∀ {D} → Γ₂ ∋ D → Γ₃ ⊢ D)
+      → (∀ {A B} (M : Γ₁ , A ⊢ B) → (subst (exts σ₂) ∘ subst (exts σ₁)) M ≡ subst (exts (subst σ₂ ∘ σ₁)) M)
+    extsexts-helper : ∀ {Γ₁ Γ₂ Γ₃}
+      → (σ₁ : ∀ {D} → Γ₁ ∋ D → Γ₂ ⊢ D)
+      → (σ₂ : ∀ {E} → Γ₂ ∋ E → Γ₃ ⊢ E)
+      → (∀ {A B C} (M : Γ₁ , A , B ⊢ C) → (subst (exts (exts σ₂)) ∘ subst (exts (exts σ₁))) M ≡ subst (exts (exts (subst σ₂ ∘ σ₁))) M)
+
+    helper σ₁ σ₂ (` x)           = refl
+    helper σ₁ σ₂ (ƛ M)           = cong ƛ_ (exts-helper σ₁ σ₂ M)
+    helper σ₁ σ₂ (M · M₁)        = cong₂ _·_ (helper σ₁ σ₂ M) (helper σ₁ σ₂ M₁)
+    helper σ₁ σ₂ (`zero)         = refl
+    helper σ₁ σ₂ (`suc M)        = cong `suc_ (helper σ₁ σ₂ M)
+    helper σ₁ σ₂ (case M M₁ M₂)  = cong₃ case (helper σ₁ σ₂ M) (helper σ₁ σ₂ M₁) (exts-helper σ₁ σ₂ M₂)
+    helper σ₁ σ₂ (μ M)           = cong μ_ (exts-helper σ₁ σ₂ M)
+    helper σ₁ σ₂ (con x)         = refl
+    helper σ₁ σ₂ (M `* M₁)       = cong₂ _`*_ (helper σ₁ σ₂ M) (helper σ₁ σ₂ M₁)
+    helper σ₁ σ₂ (`let M M₁)     = cong₂ `let (helper σ₁ σ₂ M) (exts-helper σ₁ σ₂ M₁)
+    helper σ₁ σ₂ (`⟨ M , M₁ ⟩)   = cong₂ `⟨_,_⟩ (helper σ₁ σ₂ M) (helper σ₁ σ₂ M₁)
+    helper σ₁ σ₂ (`proj₁ M)      = cong `proj₁ (helper σ₁ σ₂ M)
+    helper σ₁ σ₂ (`proj₂ M)      = cong `proj₂ (helper σ₁ σ₂ M)
+    helper σ₁ σ₂ (case× M M₁)    = cong₂ case× (helper σ₁ σ₂ M) (extsexts-helper σ₁ σ₂ M₁)
+    helper σ₁ σ₂ (`inj₁ X)       = cong `inj₁ (helper σ₁ σ₂ X)
+    helper σ₁ σ₂ (`inj₂ X)       = cong `inj₂ (helper σ₁ σ₂ X)
+    helper σ₁ σ₂ (case⊎ X X₁ X₂) = cong₃ case⊎ (helper σ₁ σ₂ X) (exts-helper σ₁ σ₂ X₁) (exts-helper σ₁ σ₂ X₂)
+    helper σ₁ σ₂ `tt             = refl
+    helper σ₁ σ₂ (case⊤ X X₁)    = cong₂ case⊤ (helper σ₁ σ₂ X) (helper σ₁ σ₂ X₁)
+    helper σ₁ σ₂ (case⊥ X)       = cong case⊥ (helper σ₁ σ₂ X)
+    helper σ₁ σ₂ `[]             = refl
+    helper σ₁ σ₂ (X `∷ X₁)       = cong₂ _`∷_ (helper σ₁ σ₂ X) (helper σ₁ σ₂ X₁)
+    helper σ₁ σ₂ (caseL X X₁ X₂) = cong₃ caseL (helper σ₁ σ₂ X) (helper σ₁ σ₂ X₁) (extsexts-helper σ₁ σ₂ X₂)
+
+    exts-helper σ₁ σ₂ M =
+      EqR.begin
+        subst (exts σ₂) (subst (exts σ₁) M)
+      EqR.≡⟨ helper (exts σ₁) (exts σ₂) M ⟩
+        subst (subst (exts σ₂) ∘ exts σ₁) M
+      EqR.≡⟨ cong-app (cong-subst (subst-exts-commute σ₁ σ₂)) M ⟩
+        subst (exts (subst σ₂ ∘ σ₁)) M
+      EqR.∎
+
+    extsexts-helper σ₁ σ₂ M =
+      EqR.begin
+        subst (exts (exts σ₂)) (subst (exts (exts σ₁)) M)
+      EqR.≡⟨ exts-helper (exts σ₁) (exts σ₂) M ⟩
+        subst (exts (subst (exts σ₂) ∘ exts σ₁)) M
+      EqR.≡⟨ cong-app (cong-subst (cong-exts (subst-exts-commute σ₁ σ₂))) M ⟩
+        subst (exts (exts (subst σ₂ ∘ σ₁))) M
+      EqR.∎
+
+double-subst : ∀ {Γ A B C} {V : Γ ⊢ A} {W : Γ ⊢ B} {N : Γ , A , B ⊢ C}
+  → N [ V ][ W ] ≡ (N [ rename S_ W ]) [ V ]
+double-subst {V = V} {W = W} {N = N} =
+  EqR.begin
+    N [ V ][ W ]
+  EqR.≡⟨ cong-app (cong-subst (extensionality λ{ Z → helper ; (S Z) → refl ; (S (S x)) → refl})) N ⟩
+    subst (_[ V ] ∘ substZero (rename S_ W)) N
+  EqR.≡⟨ sym (cong-app (subst-compose (substZero (rename S_ W)) (substZero V)) N) ⟩
+    (N [ rename S_ W ]) [ V ]
+  EqR.∎
+  where
+    exts-` : ∀ {Γ A B}
+      → exts {Γ = Γ} `_ {A = A} {B = B} ≡ λ x → ` x
+    exts-` = extensionality helper
+      where
+        helper : ∀ {Γ A B} (X : Γ , A ∋ B)
+          → exts {Γ = Γ} `_ {A = A} {B = B} X ≡ ` X
+        helper Z     = refl
+        helper (S X) = refl
+
+    subst-` : ∀ {Γ A}
+      → subst {Γ = Γ} `_ {C = A} ≡ λ X → X
+    subst-` = extensionality helper
+      where
+        helper : ∀ {Γ A} (X : Γ ⊢ A)
+          → subst `_ X ≡ X
+        exts-helper : ∀ {Γ A B} (X : Γ , A ⊢ B)
+          → subst (exts `_) X ≡ X
+        extsexts-helper : ∀ {Γ A B C} (X : Γ , A , B ⊢ C)
+          → subst (exts (exts `_)) X ≡ X
+
+        helper (` x)           = refl
+        helper (ƛ X)           = cong ƛ_ (exts-helper X)
+        helper (X · X₁)        = cong₂ _·_ (helper X) (helper X₁)
+        helper `zero           = refl
+        helper (`suc X)        = cong `suc_ (helper X)
+        helper (case X X₁ X₂)  = cong₃ case (helper X) (helper X₁) (exts-helper X₂)
+        helper (μ X)           = cong μ_ (exts-helper X)
+        helper (con x)         = refl
+        helper (X `* X₁)       = cong₂ _`*_ (helper X) (helper X₁)
+        helper (`let X X₁)     = cong₂ `let (helper X) (exts-helper X₁)
+        helper `⟨ X , X₁ ⟩     = cong₂ `⟨_,_⟩ (helper X) (helper X₁)
+        helper (`proj₁ X)      = cong `proj₁ (helper X)
+        helper (`proj₂ X)      = cong `proj₂ (helper X)
+        helper (case× X X₁)    = cong₂ case× (helper X) (extsexts-helper X₁)
+        helper (`inj₁ X)       = cong `inj₁ (helper X)
+        helper (`inj₂ X)       = cong `inj₂ (helper X)
+        helper (case⊎ X X₁ X₂) = cong₃ case⊎ (helper X) (exts-helper X₁) (exts-helper X₂)
+        helper `tt             = refl
+        helper (case⊤ X X₁)    = cong₂ case⊤ (helper X) (helper X₁)
+        helper (case⊥ X)       = cong case⊥ (helper X)
+        helper `[]             = refl
+        helper (X `∷ X₁)       = cong₂ _`∷_ (helper X) (helper X₁)
+        helper (caseL X X₁ X₂) = cong₃ caseL (helper X) (helper X₁) (extsexts-helper X₂)
+
+        exts-helper X =
+          EqR.begin
+            subst (exts `_) X
+          EqR.≡⟨ cong-app (cong-subst exts-`) X ⟩
+            subst `_ X
+          EqR.≡⟨ helper X ⟩
+            X
+          EqR.∎
+
+        extsexts-helper X =
+          EqR.begin
+            subst (exts (exts `_)) X
+          EqR.≡⟨ cong-app (cong-subst (cong-exts exts-`)) X ⟩
+            subst (exts `_) X
+          EqR.≡⟨ exts-helper X ⟩
+            X
+          EqR.∎
+
+    helper : W ≡ (rename S_ W) [ V ]
+    helper =
+      EqR.begin
+        W
+      EqR.≡⟨ sym (cong-app subst-` W) ⟩
+        subst `_ W
+      EqR.≡⟨⟩
+        subst (substZero V ∘ S_) W
+      EqR.≡⟨ sym (cong-app (subst-rename-compose S_ (substZero V)) W) ⟩
+        (rename S_ W) [ V ]
+      EqR.∎
+```
+
 
 ## Test examples
 
