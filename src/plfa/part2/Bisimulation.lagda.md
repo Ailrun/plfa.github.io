@@ -180,7 +180,114 @@ to use a decidable predicate to pick out terms in the domain of `_†`, using
 [proof by reflection](/Decidable/#proof-by-reflection).
 
 ```
--- Your code goes here
+import Relation.Binary.PropositionalEquality as Eq
+open Eq using (_≡_; refl)
+open Eq using (cong; cong₂)
+module Eqr = Eq.≡-Reasoning
+open import Relation.Nullary using (Dec; yes; no)
+open import Relation.Nullary.Decidable using (fromWitness; toWitness; True)
+
+data †-Domain : ∀ {Γ A} → Γ ⊢ A → Set where
+  †-` : ∀ {Γ A} {x : Γ ∋ A}
+     ---------------
+   → †-Domain (` x)
+
+  †-ƛ_ : ∀ {Γ A B} {N : Γ , A ⊢ B}
+   → †-Domain N
+     ---------------
+   → †-Domain (ƛ N)
+
+  †-_·_ : ∀ {Γ A B} {L : Γ ⊢ A ⇒ B} {M : Γ ⊢ A}
+   → †-Domain L
+   → †-Domain M
+     ---------------
+   → †-Domain (L · M)
+
+  †-let : ∀ {Γ A B} {M : Γ ⊢ A} {N : Γ , A ⊢ B}
+   → †-Domain M
+   → †-Domain N
+     ---------------
+   → †-Domain (`let M N)
+
+†-domain : ∀ {Γ A} (M : Γ ⊢ A)
+  → Dec (†-Domain M)
+†-domain (` x)                               = yes †-`
+†-domain (ƛ M) with †-domain M
+...               | yes DM                   = yes (†-ƛ DM)
+...               | no ¬DM                   = no λ{ (†-ƛ DM) → ¬DM DM }
+†-domain (M · N) with †-domain M | †-domain N
+...                  | yes DM    | yes DN    = yes (†- DM · DN)
+...                  | no ¬DM    | _         = no λ{ (†- DM · _)  → ¬DM DM }
+...                  | _         | no ¬DN    = no λ{ (†- _  · DN) → ¬DN DN }
+†-domain `zero                               = no (λ ())
+†-domain (`suc M)                            = no (λ ())
+†-domain (case L M N)                        = no (λ ())
+†-domain (μ M)                               = no (λ ())
+†-domain (con n)                             = no (λ ())
+†-domain (M `* N)                            = no (λ ())
+†-domain (`let M N) with †-domain M | †-domain N
+...                    | yes DM     | yes DN = yes (†-let DM DN)
+...                    | no ¬DM     | _      = no λ{ (†-let DM _)  → ¬DM DM }
+...                    | _          | no ¬DN = no λ{ (†-let _  DN) → ¬DN DN }
+†-domain `⟨ M , N ⟩                          = no (λ ())
+†-domain (`proj₁ M)                          = no (λ ())
+†-domain (`proj₂ N)                          = no (λ ())
+†-domain (case× L M)                         = no (λ ())
+†-domain (`inj₁ M)                           = no (λ ())
+†-domain (`inj₂ M)                           = no (λ ())
+†-domain (case⊎ M M₁ M₂)                     = no (λ ())
+†-domain `tt                                 = no (λ ())
+†-domain (case⊤ M M₁)                        = no (λ ())
+†-domain (case⊥ M)                           = no (λ ())
+†-domain `[]                                 = no (λ ())
+†-domain (M `∷ M₁)                           = no (λ ())
+†-domain (caseL M M₁ M₂)                     = no (λ ())
+
+_†-by_ : ∀ {Γ A} (M : Γ ⊢ A) → †-Domain M → Γ ⊢ A
+_†-by_ (` x)      †-`           = ` x
+_†-by_ (ƛ M)      (†-ƛ DM)      = ƛ (M †-by DM)
+_†-by_ (M · N)    (†- DM · DN)  = M †-by DM · N †-by DN
+_†-by_ (`let M N) (†-let DM DN) = (ƛ N †-by DN) · M †-by DM
+
+_† : ∀ {Γ A} (M : Γ ⊢ A) {TDM : True (†-domain M)} → Γ ⊢ A
+_† M {TDM} = M †-by toWitness TDM
+infix 5 _†
+
+†→~ : ∀ {Γ A} (M : Γ ⊢ A) {TDM : True (†-domain M)}
+  → ∀ {N : Γ ⊢ A} → _† M {TDM = TDM} ≡ N → M ~ N
+†→~ M {TDM} M†≡N = helper M (toWitness TDM) M†≡N
+  where
+    helper : ∀ {Γ A} (M : Γ ⊢ A) (DM : †-Domain M)
+      → ∀ {N : Γ ⊢ A} → M †-by DM ≡ N → M ~ N
+    helper (` x)      †-`           refl = ~`
+    helper (ƛ M)      (†-ƛ DM)      refl = ~ƛ helper M DM refl
+    helper (L · M)    (†- DL · DM)  refl = helper L DL refl ~· helper M DM refl
+    helper (`let L M) (†-let DL DM) refl = ~let (helper L DL refl) (helper M DM refl)
+
+~→†-Domain : ∀ {Γ A} {M : Γ ⊢ A}
+  → ∀ {N : Γ ⊢ A} → M ~ N → †-Domain M
+~→†-Domain ~`           = †-`
+~→†-Domain (~ƛ ~M)      = †-ƛ (~→†-Domain ~M)
+~→†-Domain (~M ~· ~N)   = †- ~→†-Domain ~M · ~→†-Domain ~N
+~→†-Domain (~let ~M ~N) = †-let (~→†-Domain ~M) (~→†-Domain ~N)
+
+~→†-by : ∀ {Γ A} {M N : Γ ⊢ A} (DM : †-Domain M)
+  → M ~ N
+  → M †-by DM ≡ N
+~→†-by †-`           ~`           = refl
+~→†-by (†-ƛ DM)      (~ƛ ~M)      = cong ƛ_ (~→†-by DM ~M)
+~→†-by (†- DM · DN)  (~M ~· ~N)   = cong₂ _·_ (~→†-by DM ~M) (~→†-by DN ~N)
+~→†-by (†-let DM DN) (~let ~M ~N) = cong₂ _·_ (cong ƛ_ (~→†-by DN ~N)) (~→†-by DM ~M)
+
+~→† : ∀ {Γ A} {M N : Γ ⊢ A} 
+  → (~M : M ~ N)
+  → _† M {TDM = fromWitness (~→†-Domain ~M)} ≡ N
+~→† M~N = helper M~N
+  where
+    helper : ∀ {Γ A} {M N : Γ ⊢ A} {TDM : True (†-domain M)}
+      → M ~ N
+      → _† M {TDM = TDM} ≡ N
+    helper {TDM = TDM} = ~→†-by (toWitness TDM)
 ```
 
 
@@ -209,7 +316,12 @@ Show that this also holds in the reverse direction: if `M ~ M†`
 and `Value M†` then `Value M`.
 
 ```
--- Your code goes here
+~val⁻¹ : ∀ {Γ A} {M M† : Γ ⊢ A}
+  → M ~ M†
+  → Value M†
+    ---------
+  → Value M
+~val⁻¹ (~ƛ ~M) V-ƛ = V-ƛ
 ```
 
 
@@ -467,7 +579,26 @@ Show that we also have a simulation in the other direction, and hence that we ha
 a bisimulation.
 
 ```
--- Your code goes here
+data Leg⁻¹ {Γ A} (M N† : Γ ⊢ A) : Set where
+  leg⁻¹ : ∀ {N : Γ ⊢ A}
+    → M —→ N
+    → N ~ N†
+      --------
+    → Leg⁻¹ M N†
+
+sim⁻¹ : ∀ {Γ A} {M M† N† : Γ ⊢ A}
+  → M ~ M†
+  → M† —→ N†
+    ---------
+  → Leg⁻¹ M N†
+sim⁻¹ (~L ~· ~M)      (ξ-·₁ L—→)    with sim⁻¹ ~L L—→
+...                                    | leg⁻¹ N—→ ~L′ = leg⁻¹ (ξ-·₁ N—→) (~L′ ~· ~M)
+sim⁻¹ (~L ~· ~M)      (ξ-·₂ VL M—→) with sim⁻¹ ~M M—→
+...                                    | leg⁻¹ N—→ ~M′ = leg⁻¹ (ξ-·₂ (~val⁻¹ ~L VL) N—→) (~L ~· ~M′)
+sim⁻¹ ((~ƛ ~L) ~· ~M) (β-ƛ VM)                         = leg⁻¹ (β-ƛ (~val⁻¹ ~M VM)) (~sub ~L ~M)
+sim⁻¹ (~let ~M ~L)    (ξ-·₂ VL M—→) with sim⁻¹ ~M M—→
+...                                    | leg⁻¹ N—→ ~M′ = leg⁻¹ (ξ-let N—→) (~let ~M′ ~L)
+sim⁻¹ (~let ~M ~L)    (β-ƛ VM)                         = leg⁻¹ (β-let (~val⁻¹ ~M VM)) (~sub ~L ~M)
 ```
 
 #### Exercise `products` (practice)
@@ -479,7 +610,195 @@ variables, and those connected to functions and products.
 In this case, the simulation is _not_ lock-step.
 
 ```
--- Your code goes here
+infix  4 _~ˣ_
+infix  5 ~ˣƛ_
+infix  7 _~ˣ·_
+
+data _~ˣ_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
+
+  ~ˣ` : ∀ {Γ A} {x : Γ ∋ A}
+     ---------
+   → ` x ~ˣ ` x
+
+  ~ˣƛ_ : ∀ {Γ A B} {N N† : Γ , A ⊢ B}
+    → N ~ˣ N†
+      ----------
+    → ƛ N ~ˣ ƛ N†
+
+  _~ˣ·_ : ∀ {Γ A B} {L L† : Γ ⊢ A ⇒ B} {M M† : Γ ⊢ A}
+    → L ~ˣ L†
+    → M ~ˣ M†
+      ---------------
+    → L · M ~ˣ L† · M†
+
+  ~ˣ⟨_,_⟩ : ∀ {Γ A B} {M M† : Γ ⊢ A} {N N† : Γ ⊢ B}
+    → M ~ˣ M†
+    → N ~ˣ N†
+      ----------------------
+    → `⟨ M , N ⟩ ~ˣ `⟨ M† , N† ⟩
+
+  ~ˣproj₁ : ∀ {Γ A B} {L L† : Γ ⊢ A `× B}
+    → L ~ˣ L†
+      ----------------------
+    → `proj₁ L ~ˣ case× L† (# 1)
+
+  ~ˣproj₂ : ∀ {Γ A B} {L L† : Γ ⊢ A `× B}
+    → L ~ˣ L†
+      ----------------------
+    → `proj₂ L ~ˣ case× L† (# 0)
+
+~ˣval : ∀ {Γ A} {M M† : Γ ⊢ A}
+  → M ~ˣ M†
+  → Value M
+    --------
+  → Value M†
+~ˣval ~ˣ`            ()
+~ˣval (~ˣƛ ~M)       V-ƛ            = V-ƛ
+~ˣval (~M ~ˣ· ~M₁)   ()
+~ˣval ~ˣ⟨ ~M , ~M₁ ⟩ V-⟨ VM , VM₁ ⟩ = V-⟨ ~ˣval ~M VM , ~ˣval ~M₁ VM₁ ⟩
+~ˣval (~ˣproj₁ ~M)   ()
+~ˣval (~ˣproj₂ ~M)   ()
+
+~ˣval⁻¹ : ∀ {Γ A} {M M† : Γ ⊢ A}
+  → M ~ˣ M†
+  → Value M†
+    --------
+  → Value M
+~ˣval⁻¹ ~ˣ`            ()
+~ˣval⁻¹ (~ˣƛ ~M)       V-ƛ              = V-ƛ
+~ˣval⁻¹ (~M ~ˣ· ~M₁)   ()
+~ˣval⁻¹ ~ˣ⟨ ~M , ~M₁ ⟩ V-⟨ VM† , VM†₁ ⟩ = V-⟨ ~ˣval⁻¹ ~M VM† , ~ˣval⁻¹ ~M₁ VM†₁ ⟩
+~ˣval⁻¹ (~ˣproj₁ ~M)   ()
+~ˣval⁻¹ (~ˣproj₂ ~M)   ()
+
+~ˣrename : ∀ {Γ Δ}
+  → (ρ : ∀ {A} → Γ ∋ A → Δ ∋ A)
+    ----------------------------------------------------------
+  → (∀ {A} {M M† : Γ ⊢ A} → M ~ˣ M† → rename ρ M ~ˣ rename ρ M†)
+~ˣrename ρ ~ˣ`            = ~ˣ`
+~ˣrename ρ (~ˣƛ ~M)       = ~ˣƛ ~ˣrename (ext ρ) ~M
+~ˣrename ρ (~L ~ˣ· ~M)   = ~ˣrename ρ ~L ~ˣ· ~ˣrename ρ ~M
+~ˣrename ρ ~ˣ⟨ ~M , ~N ⟩ = ~ˣ⟨ ~ˣrename ρ ~M , ~ˣrename ρ ~N ⟩
+~ˣrename ρ (~ˣproj₁ ~L)   = ~ˣproj₁ (~ˣrename ρ ~L)
+~ˣrename ρ (~ˣproj₂ ~L)   = ~ˣproj₂ (~ˣrename ρ ~L)
+
+~ˣexts : ∀ {Γ Δ}
+  → {σ  : ∀ {A} → Γ ∋ A → Δ ⊢ A}
+  → {σ† : ∀ {A} → Γ ∋ A → Δ ⊢ A}
+  → (∀ {A} → (x : Γ ∋ A) → σ x ~ˣ σ† x)
+    --------------------------------------------------
+  → (∀ {A B} → (x : Γ , B ∋ A) → exts σ x ~ˣ exts σ† x)
+~ˣexts ~σ Z      = ~ˣ`
+~ˣexts ~σ (S ∋x) = ~ˣrename S_ (~σ ∋x)
+
+~ˣsubst : ∀ {Γ Δ}
+  → {σ  : ∀ {A} → Γ ∋ A → Δ ⊢ A}
+  → {σ† : ∀ {A} → Γ ∋ A → Δ ⊢ A}
+  → (∀ {A} → (x : Γ ∋ A) → σ x ~ˣ σ† x)
+    ---------------------------------------------------------
+  → (∀ {A} {M M† : Γ ⊢ A} → M ~ˣ M† → subst σ M ~ˣ subst σ† M†)
+~ˣsubst ~σ (~ˣ` {x = x}) = ~σ x
+~ˣsubst ~σ (~ˣƛ ~M)      = ~ˣƛ ~ˣsubst (~ˣexts ~σ) ~M
+~ˣsubst ~σ (~L ~ˣ· ~M)   = ~ˣsubst ~σ ~L ~ˣ· ~ˣsubst ~σ ~M
+~ˣsubst ~σ ~ˣ⟨ ~M , ~N ⟩ = ~ˣ⟨ ~ˣsubst ~σ ~M , ~ˣsubst ~σ ~N ⟩
+~ˣsubst ~σ (~ˣproj₁ ~L)  = ~ˣproj₁ (~ˣsubst ~σ ~L)
+~ˣsubst ~σ (~ˣproj₂ ~L)  = ~ˣproj₂ (~ˣsubst ~σ ~L)
+
+~ˣsub : ∀ {Γ A B} {N N† : Γ , B ⊢ A} {M M† : Γ ⊢ B}
+  → N ~ˣ N†
+  → M ~ˣ M†
+    -----------------------
+  → (N [ M ]) ~ˣ (N† [ M† ])
+~ˣsub {Γ} {A} {B} ~N ~M = ~ˣsubst ~σ ~N
+  where
+    ~σ : ∀ {A} → (x : Γ , B ∋ A) → _ ~ˣ _
+    ~σ Z     = ~M
+    ~σ (S x) = ~ˣ`
+
+~ˣsub₂ : ∀ {Γ A B C} {N N† : Γ , C , B ⊢ A} {L L† : Γ ⊢ B} {M M† : Γ ⊢ C}
+  → N ~ˣ N†
+  → L ~ˣ L†
+  → M ~ˣ M†
+    -----------------------
+  → (N [ M ][ L ]) ~ˣ (N† [ M† ][ L† ])
+~ˣsub₂ {Γ} {A} {B} {C} ~N ~L ~M = ~ˣsubst ~σ ~N
+  where
+    ~σ : ∀ {A} → (x : Γ , C , B ∋ A) → _ ~ˣ _
+    ~σ Z         = ~L
+    ~σ (S Z)     = ~M
+    ~σ (S (S x)) = ~ˣ`
+
+data Legˣ {Γ A} (M† N : Γ ⊢ A) : Set where
+  legˣ : ∀ {N† : Γ ⊢ A}
+    → N ~ˣ N†
+    → M† —→ N†
+      ----------
+    → Legˣ M† N
+
+simˣ : ∀ {Γ A} {M M† N : Γ ⊢ A}
+  → M ~ˣ M†
+  → M —→ N
+    ----------
+  → Legˣ M† N
+simˣ ~ˣ`               ()
+simˣ (~ˣƛ ~M)          ()
+simˣ (~L ~ˣ· ~M)       (ξ-·₁ L—→)
+  with simˣ ~L L—→
+... | legˣ ~N L†—→                           = legˣ (~N ~ˣ· ~M) (ξ-·₁ L†—→)
+simˣ (~L ~ˣ· ~M)       (ξ-·₂ VL M—→)
+  with simˣ ~M M—→
+... | legˣ ~N M†—→                           = legˣ (~L ~ˣ· ~N) (ξ-·₂ (~ˣval ~L VL) M†—→)
+simˣ ((~ˣƛ ~L) ~ˣ· ~M) (β-ƛ VM)              = legˣ (~ˣsub ~L ~M) (β-ƛ (~ˣval ~M VM))
+simˣ ~ˣ⟨ ~L , ~M ⟩     (ξ-⟨,⟩₁ L—→)
+  with simˣ ~L L—→
+...  | legˣ ~N L†—→                          = legˣ ~ˣ⟨ ~N , ~M ⟩ (ξ-⟨,⟩₁ L†—→)
+simˣ ~ˣ⟨ ~L , ~M ⟩     (ξ-⟨,⟩₂ VL M—→)
+  with simˣ ~M M—→
+...  | legˣ ~N M†—→                          = legˣ ~ˣ⟨ ~L , ~N ⟩ (ξ-⟨,⟩₂ (~ˣval ~L VL) M†—→)
+simˣ (~ˣproj₁ ~L)      (ξ-proj₁ L—→)
+  with simˣ ~L L—→
+...  | legˣ ~N L†—→                          = legˣ (~ˣproj₁ ~N) (ξ-case× L†—→)
+simˣ (~ˣproj₁ ~ˣ⟨ ~M , ~N ⟩) (β-proj₁ VV VW) = legˣ ~M (β-case× (~ˣval ~M VV) (~ˣval ~N VW))
+simˣ (~ˣproj₂ ~L)      (ξ-proj₂ L—→)
+  with simˣ ~L L—→
+...  | legˣ ~N L†—→                          = legˣ (~ˣproj₂ ~N) (ξ-case× L†—→)
+simˣ (~ˣproj₂ ~ˣ⟨ ~M , ~N ⟩) (β-proj₂ VV VW) = legˣ ~N (β-case× (~ˣval ~M VV) (~ˣval ~N VW))
+
+data Legˣ⁻¹ {Γ A} (M N† : Γ ⊢ A) : Set where
+  legˣ⁻¹ : ∀ {N : Γ ⊢ A}
+    → M —→ N
+    → N ~ˣ N†
+      ----------
+    → Legˣ⁻¹ M N†
+
+simˣ⁻¹ : ∀ {Γ A} {M M† N† : Γ ⊢ A}
+  → M ~ˣ M†
+  → M† —→ N†
+    -----------
+  → Legˣ⁻¹ M N†
+simˣ⁻¹ ~ˣ`          ()
+simˣ⁻¹ (~ˣƛ ~M)     ()
+simˣ⁻¹ (~L ~ˣ· ~M) (ξ-·₁ L†—→)
+  with simˣ⁻¹ ~L L†—→
+...  | legˣ⁻¹ L—→ ~N                           = legˣ⁻¹ (ξ-·₁ L—→) (~N ~ˣ· ~M)
+simˣ⁻¹ (~L ~ˣ· ~M) (ξ-·₂ VL M†—→)
+  with simˣ⁻¹ ~M M†—→
+...  | legˣ⁻¹ M—→ ~N                           = legˣ⁻¹ (ξ-·₂ (~ˣval⁻¹ ~L VL) M—→) (~L ~ˣ· ~N)
+simˣ⁻¹ ((~ˣƛ ~L) ~ˣ· ~M) (β-ƛ VM)              = legˣ⁻¹ (β-ƛ (~ˣval⁻¹ ~M VM)) (~ˣsub ~L ~M)
+simˣ⁻¹ ~ˣ⟨ ~L , ~M ⟩ (ξ-⟨,⟩₁ L†—→)
+  with simˣ⁻¹ ~L L†—→
+...  | legˣ⁻¹ L—→ ~N                           = legˣ⁻¹ (ξ-⟨,⟩₁ L—→) ~ˣ⟨ ~N , ~M ⟩
+simˣ⁻¹ ~ˣ⟨ ~L , ~M ⟩ (ξ-⟨,⟩₂ VL M†—→)
+  with simˣ⁻¹ ~M M†—→
+...  | legˣ⁻¹ M—→ ~N                           = legˣ⁻¹ (ξ-⟨,⟩₂ (~ˣval⁻¹ ~L VL) M—→) ~ˣ⟨ ~L , ~N ⟩
+simˣ⁻¹ (~ˣproj₁ ~L) (ξ-case× L†—→)
+  with simˣ⁻¹ ~L L†—→
+...  | legˣ⁻¹ L—→ ~N                           = legˣ⁻¹ (ξ-proj₁ L—→) (~ˣproj₁ ~N)
+simˣ⁻¹ (~ˣproj₁ ~ˣ⟨ ~V , ~W ⟩) (β-case× VV VW) = legˣ⁻¹ (β-proj₁ (~ˣval⁻¹ ~V VV) (~ˣval⁻¹ ~W VW)) ~V
+simˣ⁻¹ (~ˣproj₂ ~L) (ξ-case× L†—→)
+  with simˣ⁻¹ ~L L†—→
+...  | legˣ⁻¹ L—→ ~N                           = legˣ⁻¹ (ξ-proj₂ L—→) (~ˣproj₂ ~N)
+simˣ⁻¹ (~ˣproj₂ ~ˣ⟨ ~V , ~W ⟩) (β-case× VV VW) = legˣ⁻¹ (β-proj₂ (~ˣval⁻¹ ~V VV) (~ˣval⁻¹ ~W VW)) ~W
 ```
 
 ## Unicode
