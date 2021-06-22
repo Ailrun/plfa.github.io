@@ -513,7 +513,7 @@ DeBruijn representation.
 
 ```
 mul : ∀ {Γ} → Γ ⊢ `ℕ ⇒ `ℕ ⇒ `ℕ
-mul = μ ƛ ƛ case (# 1) (# 0) (# 3 · # 0 · # 1)
+mul = μ ƛ ƛ case (# 1) `zero (plus · # 1 · (# 3 · # 0 · # 1))
 ```
 
 
