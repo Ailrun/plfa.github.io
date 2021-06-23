@@ -147,7 +147,20 @@ showing that the diamond property holds for parallel reduction in that
 case.
 
 ```
--- Your code goes here
+par-diamond-eg : ∀ {Γ} {M : Γ ⊢ ★}
+  -- (λ x. x x)((λ x. x) a) ⇛ (λ x. x x) a
+  → ((ƛ # 0 · # 0) · ((ƛ # 0) · M) ⇛ (ƛ # 0 · # 0) · M)
+  -- (λ x. x x)((λ x. x) a) ⇛ ((λ x. x) a) ((λ x. x) a)
+    × ((ƛ # 0 · # 0) · ((ƛ # 0) · M) ⇛ ((ƛ # 0) · M) · ((ƛ # 0) · M))
+  -- (λ x. x x) a ⇛ a a
+    × ((ƛ # 0 · # 0) · M ⇛ M · M)
+-- ((λ x. x) a) ((λ x. x) a) ⇛ a a
+    × (((ƛ # 0) · M) · ((ƛ # 0) · M) ⇛ M · M)
+par-diamond-eg =
+  ⟨ papp par-refl (pbeta par-refl par-refl)
+  , ⟨ pbeta par-refl par-refl
+    , ⟨ pbeta par-refl par-refl
+      , papp (pbeta par-refl par-refl) (pbeta par-refl par-refl) ⟩ ⟩ ⟩
 ```
 
 
@@ -507,6 +520,175 @@ This step is optional, though, in the presence of triangle property.
   the direct proof of `par-diamond`. The pictures should consist of nodes
   and directed edges, where each node is labeled with a term and each
   edge represents parallel reduction.
+
+```
+par-diamond′ : ∀{Γ A} {M N N′ : Γ ⊢ A}
+  → M ⇛ N
+  → M ⇛ N′
+    ---------------------------------
+  → Σ[ L ∈ Γ ⊢ A ] (N ⇛ L) × (N′ ⇛ L)
+par-diamond′ pvar                    pvar                 = ⟨ ` _ , ⟨ pvar , pvar ⟩ ⟩
+par-diamond′ (pabs M⇛N)              (pabs M⇛N′)               with par-diamond′ M⇛N M⇛N′
+... | ⟨ L , ⟨ N⇛L , N′⇛L ⟩ ⟩ = ⟨ ƛ L , ⟨ pabs N⇛L , pabs N′⇛L ⟩ ⟩
+par-diamond′ (papp M⇛N M₁⇛N₁)        (papp M⇛N′ M₁⇛N₁′)        with par-diamond′ M⇛N M⇛N′ | par-diamond′ M₁⇛N₁ M₁⇛N₁′
+... | ⟨ L , ⟨ N⇛L , N′⇛L ⟩ ⟩ | ⟨ L₁ , ⟨ N₁⇛L₁ , N₁′⇛L₁ ⟩ ⟩ = ⟨ L · L₁ , ⟨ papp N⇛L N₁⇛L₁ , papp N′⇛L N₁′⇛L₁ ⟩ ⟩
+par-diamond′ (papp (pabs M⇛N) M₁⇛N₁) (pbeta M⇛N′ M₁⇛N₁′)       with par-diamond′ M⇛N M⇛N′ | par-diamond′ M₁⇛N₁ M₁⇛N₁′
+... | ⟨ L , ⟨ N⇛L , N′⇛L ⟩ ⟩ | ⟨ L₁ , ⟨ N₁⇛L₁ , N₁′⇛L₁ ⟩ ⟩ = ⟨ L [ L₁ ] , ⟨ pbeta N⇛L N₁⇛L₁ , sub-par N′⇛L N₁′⇛L₁ ⟩ ⟩
+par-diamond′ (pbeta M⇛N M₁⇛N₁)       (papp (pabs M⇛N′) M₁⇛N₁′) with par-diamond′ M⇛N M⇛N′ | par-diamond′ M₁⇛N₁ M₁⇛N₁′
+... | ⟨ L , ⟨ N⇛L , N′⇛L ⟩ ⟩ | ⟨ L₁ , ⟨ N₁⇛L₁ , N₁′⇛L₁ ⟩ ⟩ = ⟨ L [ L₁ ] , ⟨ sub-par N⇛L N₁⇛L₁ , pbeta N′⇛L N₁′⇛L₁ ⟩ ⟩
+par-diamond′ (pbeta M⇛N M₁⇛N₁)       (pbeta M⇛N′ M₁⇛N₁′)       with par-diamond′ M⇛N M⇛N′ | par-diamond′ M₁⇛N₁ M₁⇛N₁′
+... | ⟨ L , ⟨ N⇛L , N′⇛L ⟩ ⟩ | ⟨ L₁ , ⟨ N₁⇛L₁ , N₁′⇛L₁ ⟩ ⟩ = ⟨ L [ L₁ ] , ⟨ sub-par N⇛L N₁⇛L₁ , sub-par N′⇛L N₁′⇛L₁ ⟩ ⟩
+
+--      ` x
+--      / \
+--     /   \
+--    /     \
+--  ` x     ` x
+--    \     /
+--     \   /
+--      \ /
+--      ` x
+
+--      ƛ M
+--      / \
+--     /   \
+--    /     \
+--  ƛ N     ƛ N′
+--    \     /
+--     \   /
+--      \ /
+--      ƛ L
+-- where
+--      M
+--     / \
+--    /   \
+--   /     \
+--  N       N′
+--   \     /
+--    \   /
+--     \ /
+--      L
+
+--        M · M₁
+--       /     \
+--      /       \
+--     /         \
+--  N · N₁     N′ · N₁′
+--     \         /
+--      \       /
+--       \     /
+--        L · L₁
+-- where
+--      M
+--     / \
+--    /   \
+--   /     \
+--  N       N′
+--   \     /
+--    \   /
+--     \ /
+--      L
+-- and
+--      M₁
+--     / \
+--    /   \
+--   /     \
+--  N₁      N₁′
+--   \     /
+--    \   /
+--     \ /
+--      L₁
+
+--          (λ M) · M₁
+--          /        \
+--         /          \
+--        /            \
+--  (λ N) · N₁      N′ [ N₁′ ]
+--        \            /
+--         \          /
+--          \        /
+--           L [ L₁ ]
+-- where
+--      M
+--     / \
+--    /   \
+--   /     \
+--  N       N′
+--   \     /
+--    \   /
+--     \ /
+--      L
+-- and
+--      M₁
+--     / \
+--    /   \
+--   /     \
+--  N₁      N₁′
+--   \     /
+--    \   /
+--     \ /
+--      L₁
+
+--        (λ M) · M₁
+--        /        \
+--       /          \
+--      /            \
+--  N [ N₁ ]    (λ N′) · N₁′
+--      \            /
+--       \          /
+--        \        /
+--         L [ L₁ ]
+-- where
+--      M
+--     / \
+--    /   \
+--   /     \
+--  N       N′
+--   \     /
+--    \   /
+--     \ /
+--      L
+-- and
+--      M₁
+--     / \
+--    /   \
+--   /     \
+--  N₁      N₁′
+--   \     /
+--    \   /
+--     \ /
+--      L₁
+
+--        (λ M) · M₁
+--        /        \
+--       /          \
+--      /            \
+--  N [ N₁ ]      N′ [ N₁′ ]
+--      \            /
+--       \          /
+--        \        /
+--         L [ L₁ ]
+-- where
+--      M
+--     / \
+--    /   \
+--   /     \
+--  N       N′
+--   \     /
+--    \   /
+--     \ /
+--      L
+-- and
+--      M₁
+--     / \
+--    /   \
+--   /     \
+--  N₁      N₁′
+--   \     /
+--    \   /
+--     \ /
+--      L₁
+```
 
 ## Proof of confluence for parallel reduction
 
