@@ -476,7 +476,11 @@ Rewrite your definition of multiplication from
 Chapter [Lambda](/Lambda/), decorated to support inference.
 
 ```
--- Your code goes here
+mul : Term⁺
+mul = (μ "*" ⇒ ƛ "m" ⇒ ƛ "n" ⇒
+         `case (` "m") [zero⇒ `zero
+                       |suc "m" ⇒ plus · (` "n" ↑) · (` "*" · (` "m" ↑) · (` "n" ↑) ↑) ↑ ])
+           ↓ (`ℕ ⇒ `ℕ ⇒ `ℕ)
 ```
 
 
@@ -486,7 +490,127 @@ Extend the bidirectional type rules to include products from
 Chapter [More](/More/).
 
 ```
--- Your code goes here
+infix  4  _∋_⦂′_
+infix  4  _⊢_↑′_
+infix  4  _⊢_↓′_
+
+infixr 7  _⇒′_
+infixl 8 _`×′_
+
+data Type′ : Set where
+  `ℕ   : Type′
+  _⇒′_ : Type′ → Type′ → Type′
+  _`×′_ : Type′ → Type′ → Type′
+
+data Context′ : Set where
+  ∅     : Context′
+  _,_⦂_ : Context′ → Id → Type′ → Context′
+
+data _∋_⦂′_ : Context′ → Id → Type′ → Set where
+  Z : ∀ {Γ x A}
+      --------------------
+    → Γ , x ⦂ A ∋ x ⦂′ A
+
+  S : ∀ {Γ x y A B}
+    → x ≢ y
+    → Γ ∋ x ⦂′ A
+      -----------------
+    → Γ , y ⦂ B ∋ x ⦂′ A
+
+data Term⁺′ : Set
+data Term⁻′ : Set
+
+data Term⁺′ where
+  `_     : Id → Term⁺′
+  _·_    : Term⁺′ → Term⁻′ → Term⁺′
+  `proj₁ : Term⁺′ → Term⁺′
+  `proj₂ : Term⁺′ → Term⁺′
+  _↓_    : Term⁻′ → Type′ → Term⁺′
+
+data Term⁻′ where
+  ƛ_⇒_                  : Id → Term⁻′ → Term⁻′
+  `zero                 : Term⁻′
+  `suc_                 : Term⁻′ → Term⁻′
+  `case_[zero⇒_|suc_⇒_] : Term⁺′ → Term⁻′ → Id → Term⁻′ → Term⁻′
+  μ_⇒_                  : Id → Term⁻′ → Term⁻′
+  `⟨_,_⟩                : Term⁻′ → Term⁻′ → Term⁻′
+  `case×_[⟨_,_⟩⇒_]      : Term⁺′ → Id → Id → Term⁻′ → Term⁻′
+  _↑                    : Term⁺′ → Term⁻′
+
+data _⊢_↑′_ : Context′ → Term⁺′ → Type′ → Set
+data _⊢_↓′_ : Context′ → Term⁻′ → Type′ → Set
+
+data _⊢_↑′_ where
+  ⊢` : ∀ {Γ A x}
+    → Γ ∋ x ⦂′ A
+      -----------
+    → Γ ⊢ ` x ↑′ A
+
+  _·_ : ∀ {Γ L M A B}
+    → Γ ⊢ L ↑′ A ⇒′ B
+    → Γ ⊢ M ↓′ A
+      -------------
+    → Γ ⊢ L · M ↑′ B
+
+  ⊢proj₁ : ∀ {Γ L A B}
+    → Γ ⊢ L ↑′ A `×′ B
+      -------------
+    → Γ ⊢ `proj₁ L ↑′ A
+
+  ⊢proj₂ : ∀ {Γ L A B}
+    → Γ ⊢ L ↑′ A `×′ B
+      -------------
+    → Γ ⊢ `proj₂ L ↑′ B
+
+  ⊢↓ : ∀ {Γ M A}
+    → Γ ⊢ M ↓′ A
+      ---------------
+    → Γ ⊢ (M ↓ A) ↑′ A
+
+data _⊢_↓′_ where
+  ⊢ƛ : ∀ {Γ x N A B}
+    → Γ , x ⦂ A ⊢ N ↓′ B
+      -------------------
+    → Γ ⊢ ƛ x ⇒ N ↓′ A ⇒′ B
+
+  ⊢zero : ∀ {Γ}
+      --------------
+    → Γ ⊢ `zero ↓′ `ℕ
+
+  ⊢suc : ∀ {Γ M}
+    → Γ ⊢ M ↓′ `ℕ
+      ---------------
+    → Γ ⊢ `suc M ↓′ `ℕ
+
+  ⊢case : ∀ {Γ L M x N A}
+    → Γ ⊢ L ↑′ `ℕ
+    → Γ ⊢ M ↓′ A
+    → Γ , x ⦂ `ℕ ⊢ N ↓′ A
+      -------------------------------------
+    → Γ ⊢ `case L [zero⇒ M |suc x ⇒ N ] ↓′ A
+
+  ⊢μ : ∀ {Γ x N A}
+    → Γ , x ⦂ A ⊢ N ↓′ A
+      -----------------
+    → Γ ⊢ μ x ⇒ N ↓′ A
+
+  `⟨_,_⟩ : ∀ {Γ M N A B}
+    → Γ ⊢ M ↓′ A
+    → Γ ⊢ N ↓′ B
+      -------------------------
+    → Γ ⊢ `⟨ M , N ⟩ ↓′ A `×′ B
+
+  ⊢case× : ∀ {Γ L x y M A B C}
+    → Γ ⊢ L ↑′ A `×′ B
+    → Γ , x ⦂ A , y ⦂ B ⊢ M ↓′ C
+      ----------------------------------
+    → Γ ⊢ `case× L [⟨ x , y ⟩⇒ M ] ↓′ C
+
+  ⊢↑ : ∀ {Γ M A B}
+    → Γ ⊢ M ↑′ A
+    → A ≡ B
+      -------------
+    → Γ ⊢ (M ↑) ↓′ B
 ```
 
 
@@ -496,7 +620,190 @@ Extend the bidirectional type rules to include the rest of the constructs from
 Chapter [More](/More/).
 
 ```
--- Your code goes here
+infix  4  _∋_⦂′′_
+infix  4  _⊢_↑′′_
+infix  4  _⊢_↓′′_
+
+infixr 7  _⇒′′_
+infixl 8 _`×′′_
+infixr 8  _`⊎_
+
+data Type′′ : Set where
+  `ℕ     : Type′′
+  _⇒′′_  : Type′′ → Type′′ → Type′′
+  _`×′′_ : Type′′ → Type′′ → Type′′
+  _`⊎_   : Type′′ → Type′′ → Type′′
+  `⊤     : Type′′
+  `⊥     : Type′′
+  `List  : Type′′ → Type′′
+
+data Context′′ : Set where
+  ∅     : Context′′
+  _,_⦂_ : Context′′ → Id → Type′′ → Context′′
+
+data _∋_⦂′′_ : Context′′ → Id → Type′′ → Set where
+  Z : ∀ {Γ x A}
+      --------------------
+    → Γ , x ⦂ A ∋ x ⦂′′ A
+
+  S : ∀ {Γ x y A B}
+    → x ≢ y
+    → Γ ∋ x ⦂′′ A
+      -----------------
+    → Γ , y ⦂ B ∋ x ⦂′′ A
+
+data Term⁺′′ : Set
+data Term⁻′′ : Set
+
+data Term⁺′′ where
+  `_     : Id → Term⁺′′
+  _·_    : Term⁺′′ → Term⁻′′ → Term⁺′′
+  `proj₁ : Term⁺′′ → Term⁺′′
+  `proj₂ : Term⁺′′ → Term⁺′′
+  _↓_    : Term⁻′′ → Type′′ → Term⁺′′
+
+data Term⁻′′ where
+  ƛ_⇒_                     : Id → Term⁻′′ → Term⁻′′
+  `zero                    : Term⁻′′
+  `suc_                    : Term⁻′′ → Term⁻′′
+  `case_[zero⇒_|suc_⇒_]    : Term⁺′′ → Term⁻′′ → Id → Term⁻′′ → Term⁻′′
+  μ_⇒_                     : Id → Term⁻′′ → Term⁻′′
+  `⟨_,_⟩                   : Term⁻′′ → Term⁻′′ → Term⁻′′
+  `case×_[⟨_,_⟩⇒_]         : Term⁺′′ → Id → Id → Term⁻′′ → Term⁻′′
+  `inj₁                    : Term⁻′′ → Term⁻′′
+  `inj₂                    : Term⁻′′ → Term⁻′′
+  `case⊎_[inj₁_⇒_|inj₂_⇒_] : Term⁺′′ → Id → Term⁻′′ → Id → Term⁻′′ → Term⁻′′
+  `tt                      : Term⁻′′
+  `case⊤_[tt⇒_]            : Term⁺′′ → Term⁻′′ → Term⁻′′
+  `case⊥_[]                : Term⁺′′ → Term⁻′′
+  `[]                      : Term⁻′′
+  _`∷_                     : Term⁻′′ → Term⁻′′ → Term⁻′′
+  `caseL_[[]⇒_|`_∷_⇒_]     : Term⁺′′ → Term⁻′′ → Id → Id → Term⁻′′ → Term⁻′′
+  _↑                       : Term⁺′′ → Term⁻′′
+
+data _⊢_↑′′_ : Context′′ → Term⁺′′ → Type′′ → Set
+data _⊢_↓′′_ : Context′′ → Term⁻′′ → Type′′ → Set
+
+data _⊢_↑′′_ where
+  ⊢` : ∀ {Γ A x}
+    → Γ ∋ x ⦂′′ A
+      -----------
+    → Γ ⊢ ` x ↑′′ A
+
+  _·_ : ∀ {Γ L M A B}
+    → Γ ⊢ L ↑′′ A ⇒′′ B
+    → Γ ⊢ M ↓′′ A
+      -------------
+    → Γ ⊢ L · M ↑′′ B
+
+  ⊢proj₁ : ∀ {Γ L A B}
+    → Γ ⊢ L ↑′′ A `×′′ B
+      -------------
+    → Γ ⊢ `proj₁ L ↑′′ A
+
+  ⊢proj₂ : ∀ {Γ L A B}
+    → Γ ⊢ L ↑′′ A `×′′ B
+      -------------
+    → Γ ⊢ `proj₂ L ↑′′ B
+
+  ⊢↓ : ∀ {Γ M A}
+    → Γ ⊢ M ↓′′ A
+      ---------------
+    → Γ ⊢ (M ↓ A) ↑′′ A
+
+data _⊢_↓′′_ where
+  ⊢ƛ : ∀ {Γ x N A B}
+    → Γ , x ⦂ A ⊢ N ↓′′ B
+      -------------------
+    → Γ ⊢ ƛ x ⇒ N ↓′′ A ⇒′′ B
+
+  ⊢zero : ∀ {Γ}
+      --------------
+    → Γ ⊢ `zero ↓′′ `ℕ
+
+  ⊢suc : ∀ {Γ M}
+    → Γ ⊢ M ↓′′ `ℕ
+      ---------------
+    → Γ ⊢ `suc M ↓′′ `ℕ
+
+  ⊢case : ∀ {Γ L M x N A}
+    → Γ ⊢ L ↑′′ `ℕ
+    → Γ ⊢ M ↓′′ A
+    → Γ , x ⦂ `ℕ ⊢ N ↓′′ A
+      -------------------------------------
+    → Γ ⊢ `case L [zero⇒ M |suc x ⇒ N ] ↓′′ A
+
+  ⊢μ : ∀ {Γ x N A}
+    → Γ , x ⦂ A ⊢ N ↓′′ A
+      -----------------
+    → Γ ⊢ μ x ⇒ N ↓′′ A
+
+  `⟨_,_⟩ : ∀ {Γ M N A B}
+    → Γ ⊢ M ↓′′ A
+    → Γ ⊢ N ↓′′ B
+      --------------------------
+    → Γ ⊢ `⟨ M , N ⟩ ↓′′ A `×′′ B
+
+  ⊢case× : ∀ {Γ L x y M A B C}
+    → Γ ⊢ L ↑′′ A `×′′ B
+    → Γ , x ⦂ A , y ⦂ B ⊢ M ↓′′ C
+      -----------------------------------
+    → Γ ⊢ `case× L [⟨ x , y ⟩⇒ M ] ↓′′ C
+
+  ⊢inj₁ : ∀ {Γ M A B}
+    → Γ ⊢ M ↓′′ A
+      -----------------------
+    → Γ ⊢ `inj₁ M ↓′′ A `⊎ B
+
+  ⊢inj₂ : ∀ {Γ N A B}
+    → Γ ⊢ N ↓′′ B
+      -----------------------
+    → Γ ⊢ `inj₂ N ↓′′ A `⊎ B
+
+  ⊢case⊎ : ∀ {Γ L x M y N A B C}
+    → Γ ⊢ L ↑′′ A `⊎ B
+    → Γ , x ⦂ A ⊢ M ↓′′ C
+    → Γ , y ⦂ B ⊢ N ↓′′ C
+      ---------------------------------------------
+    → Γ ⊢ `case⊎ L [inj₁ x ⇒ M |inj₂ y ⇒ N ] ↓′′ C
+
+  ⊢tt : ∀ {Γ}
+      ---------------
+    → Γ ⊢ `tt ↓′′ `⊤
+
+  ⊢case⊤ : ∀ {Γ L M A}
+    → Γ ⊢ L ↑′′ `⊤
+    → Γ ⊢ M ↓′′ A
+      ----------------------------
+    → Γ ⊢ `case⊤ L [tt⇒ M ] ↓′′ A
+
+  ⊢case⊥ : ∀ {Γ L A}
+    → Γ ⊢ L ↑′′ `⊥
+      ----------------------
+    → Γ ⊢ `case⊥ L [] ↓′′ A
+
+  ⊢[] : ∀ {Γ A}
+      --------------------
+    → Γ ⊢ `[] ↓′′ `List A
+
+  _`∷_ : ∀ {Γ M N A}
+    → Γ ⊢ M ↓′′ A
+    → Γ ⊢ N ↓′′ `List A
+      -----------------------
+    → Γ ⊢ M `∷ N ↓′′ `List A
+
+  ⊢caseL : ∀ {Γ L M x y N A B}
+    → Γ ⊢ L ↑′′ `List A
+    → Γ ⊢ M ↓′′ B
+    → Γ , x ⦂ A , y ⦂ `List A ⊢ N ↓′′ B
+      -----------------------------------------
+    → Γ ⊢ `caseL L [[]⇒ M |` x ∷ y ⇒ N ] ↓′′ B
+
+  ⊢↑ : ∀ {Γ M A B}
+    → Γ ⊢ M ↑′′ A
+    → A ≡ B
+      -------------
+    → Γ ⊢ (M ↑) ↓′′ B
 ```
 
 
@@ -1079,7 +1386,16 @@ erasure of the inferred typing yields your definition of
 multiplication from Chapter [DeBruijn](/DeBruijn/).
 
 ```
--- Your code goes here
+open import Data.Product using (proj₂)
+open import Relation.Nullary.Decidable using (from-yes)
+
+dbmul : ∀ {Γ} → Γ DB.⊢ DB.`ℕ DB.⇒ DB.`ℕ DB.⇒ DB.`ℕ
+dbmul = μ ƛ ƛ case (# 1) `zero (DB.plus · # 1 · (# 3 · # 0 · # 1))
+  where
+    open DB
+
+_ : ∥ proj₂ (from-yes (synthesize ∅ mul)) ∥⁺ ≡ dbmul
+_ = refl
 ```
 
 #### Exercise `inference-products` (recommended)
@@ -1089,7 +1405,165 @@ Using your rules from exercise
 bidirectional inference to include products.
 
 ```
--- Your code goes here
+_≟Tp′_ : (A B : Type′) → Dec (A ≡ B)
+`ℕ        ≟Tp′ `ℕ          = yes refl
+`ℕ        ≟Tp′ (A   ⇒′ B)  = no λ()
+`ℕ        ≟Tp′ (A  `×′ B)  = no (λ ())
+(A  ⇒′ B) ≟Tp′ `ℕ          = no λ()
+(A  ⇒′ B) ≟Tp′ (A′  ⇒′ B′)
+  with A ≟Tp′ A′ | B ≟Tp′ B′
+...  | no  A≢   | _        = no λ{refl → A≢ refl}
+...  | yes _    | no  B≢   = no λ{refl → B≢ refl}
+...  | yes refl | yes refl = yes refl
+(A  ⇒′ B) ≟Tp′ (A′ `×′ B′) = no (λ ())
+(A `×′ B) ≟Tp′ `ℕ          = no (λ ())
+(A `×′ B) ≟Tp′ (A′  ⇒′ B′) = no (λ ())
+(A `×′ B) ≟Tp′ (A′ `×′ B′)
+  with A ≟Tp′ A′ | B ≟Tp′ B′
+...  | no  A≢   | _        = no λ{refl → A≢ refl}
+...  | yes _    | no  B≢   = no λ{refl → B≢ refl}
+...  | yes refl | yes refl = yes refl
+
+dom′≡ : ∀ {A A′ B B′} → A ⇒′ B ≡ A′ ⇒′ B′ → A ≡ A′
+dom′≡ refl = refl
+
+rng′≡ : ∀ {A A′ B B′} → A ⇒′ B ≡ A′ ⇒′ B′ → B ≡ B′
+rng′≡ refl = refl
+
+fst′≡ : ∀ {A A′ B B′} → A `×′ B ≡ A′ `×′ B′ → A ≡ A′
+fst′≡ refl = refl
+
+snd′≡ : ∀ {A A′ B B′} → A `×′ B ≡ A′ `×′ B′ → B ≡ B′
+snd′≡ refl = refl
+
+ℕ≢⇒′ : ∀ {A B} → `ℕ ≢ A ⇒′ B
+ℕ≢⇒′ ()
+
+ℕ≢*′ : ∀ {A B} → `ℕ ≢ A `×′ B
+ℕ≢*′ ()
+
+⇒′≢*′ : ∀ {A B C D} → A ⇒′ B ≢ C `×′ D
+⇒′≢*′ ()
+
+uniq-∋′ : ∀ {Γ x A B} → Γ ∋ x ⦂′ A → Γ ∋ x ⦂′ B → A ≡ B
+uniq-∋′ Z          Z           = refl
+uniq-∋′ Z          (S x≢y _)   = ⊥-elim (x≢y refl)
+uniq-∋′ (S x≢y _)  Z           = ⊥-elim (x≢y refl)
+uniq-∋′ (S _   ∋x) (S _   ∋x′) = uniq-∋′ ∋x ∋x′
+
+uniq-↑′ : ∀ {Γ M A B} → Γ ⊢ M ↑′ A → Γ ⊢ M ↑′ B → A ≡ B
+uniq-↑′ (⊢` ∋x)     (⊢` ∋x′)     = uniq-∋′ ∋x ∋x′
+uniq-↑′ (⊢L · ⊢M)   (⊢L′ · ⊢M′)  = rng′≡ (uniq-↑′ ⊢L ⊢L′)
+uniq-↑′ (⊢↓ ⊢M)     (⊢↓ ⊢M′)     = refl
+uniq-↑′ (⊢proj₁ ⊢M) (⊢proj₁ ⊢M′) = fst′≡ (uniq-↑′ ⊢M ⊢M′)
+uniq-↑′ (⊢proj₂ ⊢M) (⊢proj₂ ⊢M′) = snd′≡ (uniq-↑′ ⊢M ⊢M′)
+
+ext∋′ : ∀ {Γ B x y}
+  → x ≢ y
+  → ¬ ∃[ A ]( Γ ∋ x ⦂′ A )
+    -----------------------------
+  → ¬ ∃[ A ]( Γ , y ⦂ B ∋ x ⦂′ A )
+ext∋′ x≢y _  ⟨ A , Z ⟩      = x≢y refl
+ext∋′ _   ¬∃ ⟨ A , S _ ∋x ⟩ = ¬∃ ⟨ A , ∋x ⟩
+
+lookup′ : ∀ (Γ : Context′) (x : Id)
+    -----------------------
+  → Dec (∃[ A ](Γ ∋ x ⦂′ A))
+lookup′ ∅ x                      = no  (λ ())
+lookup′ (Γ , y ⦂ B) x with x ≟ y
+... | yes refl                   = yes ⟨ B , Z ⟩
+... | no x≢y with lookup′ Γ x
+...             | no  ¬∃         = no  (ext∋′ x≢y ¬∃)
+...             | yes ⟨ A , ∋x ⟩ = yes ⟨ A , S x≢y ∋x ⟩
+
+¬arg′ : ∀ {Γ A B L M}
+  → Γ ⊢ L ↑′ A ⇒′ B
+  → ¬ Γ ⊢ M ↓′ A
+    -------------------------
+  → ¬ ∃[ B′ ](Γ ⊢ L · M ↑′ B′)
+¬arg′ ⊢L ¬⊢M ⟨ B′ , ⊢L′ · ⊢M′ ⟩ rewrite dom′≡ (uniq-↑′ ⊢L ⊢L′) = ¬⊢M ⊢M′
+
+¬body′ : ∀ {Γ A B C L x y M}
+  → Γ ⊢ L ↑′ A `×′ B
+  → ¬ Γ , x ⦂ A , y ⦂ B ⊢ M ↓′ C
+    -------------------------
+  → ¬ (Γ ⊢ `case× L [⟨ x , y ⟩⇒ M ] ↓′ C)
+¬body′ ⊢L ¬⊢M (⊢case× ⊢L′ ⊢M′) rewrite fst′≡ (uniq-↑′ ⊢L ⊢L′) | snd′≡ (uniq-↑′ ⊢L ⊢L′) = ¬⊢M ⊢M′
+
+synthesize′ : ∀ (Γ : Context′) (M : Term⁺′)
+    -----------------------
+  → Dec (∃[ A ](Γ ⊢ M ↑′ A))
+
+inherit′ : ∀ (Γ : Context′) (M : Term⁻′) (A : Type′)
+    ---------------
+  → Dec (Γ ⊢ M ↓′ A)
+
+synthesize′ Γ (` x)      with lookup′ Γ x
+... | yes ⟨ _ , ∋x ⟩       = yes ⟨ _ , ⊢` ∋x ⟩
+... | no  ¬∃               = no (λ{ ⟨ _ , ⊢` ∋x ⟩ → ¬∃ ⟨ _ , ∋x ⟩ })
+synthesize′ Γ (M · N)    with synthesize′ Γ M
+... | no  ¬∃               = no (λ{ ⟨ _ , ⊢M′ · _ ⟩ → ¬∃ ⟨ _ , ⊢M′ ⟩ })
+... | yes ⟨ `ℕ      , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢M′ · _ ⟩ → ℕ≢⇒′ (uniq-↑′ ⊢M ⊢M′) })
+... | yes ⟨ A `×′ B , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢M′ · _ ⟩ → ⇒′≢*′ (uniq-↑′ ⊢M′ ⊢M) })
+... | yes ⟨ A  ⇒′ B , ⊢M ⟩ with inherit′ Γ N A
+...   | no  ¬∃             = no (λ{ ⟨ _ , ⊢M′ ⟩ → ¬arg′ ⊢M ¬∃ ⟨ _ , ⊢M′ ⟩ })
+...   | yes ⊢N             = yes ⟨ B , ⊢M · ⊢N ⟩
+synthesize′ Γ (`proj₁ M) with synthesize′ Γ M
+... | no  ¬∃               = no (λ{ ⟨ _ , ⊢proj₁ ⊢M′ ⟩ → ¬∃ ⟨ _ , ⊢M′ ⟩ })
+... | yes ⟨ `ℕ      , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₁ ⊢M′ ⟩ → ℕ≢*′ (uniq-↑′ ⊢M ⊢M′) })
+... | yes ⟨ A  ⇒′ B , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₁ ⊢M′ ⟩ → ⇒′≢*′ (uniq-↑′ ⊢M ⊢M′) })
+... | yes ⟨ A `×′ B , ⊢M ⟩ = yes ⟨ A , ⊢proj₁ ⊢M ⟩
+synthesize′ Γ (`proj₂ M) with synthesize′ Γ M
+... | no  ¬∃               = no (λ{ ⟨ _ , ⊢proj₂ ⊢M′ ⟩ → ¬∃ ⟨ _ , ⊢M′ ⟩ })
+... | yes ⟨ `ℕ      , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₂ ⊢M′ ⟩ → ℕ≢*′ (uniq-↑′ ⊢M ⊢M′) })
+... | yes ⟨ A  ⇒′ B , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₂ ⊢M′ ⟩ → ⇒′≢*′ (uniq-↑′ ⊢M ⊢M′) })
+... | yes ⟨ A `×′ B , ⊢M ⟩ = yes ⟨ B , ⊢proj₂ ⊢M ⟩
+synthesize′ Γ (M ↓ A)    with inherit′ Γ M A
+... | no ¬⊢M               = no (λ{ ⟨ _ , ⊢↓ ⊢M ⟩ → ¬⊢M ⊢M })
+... | yes ⊢M               = yes ⟨ A , ⊢↓ ⊢M ⟩
+
+inherit′ Γ (ƛ x ⇒ M)                     `ℕ        = no (λ ())
+inherit′ Γ (ƛ x ⇒ M)                     (A  ⇒′ B) with inherit′ (Γ , x ⦂ A) M B
+... | no ¬⊢M                                       = no (λ{ (⊢ƛ ⊢M) → ¬⊢M ⊢M })
+... | yes ⊢M                                       = yes (⊢ƛ ⊢M)
+inherit′ Γ (ƛ x ⇒ M)                     (A `×′ B) = no (λ ())
+inherit′ Γ `zero                         `ℕ        = yes ⊢zero
+inherit′ Γ `zero                         (A  ⇒′ B) = no (λ ())
+inherit′ Γ `zero                         (A `×′ B) = no (λ ())
+inherit′ Γ (`suc M)                      `ℕ        with inherit′ Γ M `ℕ
+... | no ¬⊢M                                       = no (λ{ (⊢suc ⊢M) → ¬⊢M ⊢M })
+... | yes ⊢M                                       = yes (⊢suc ⊢M)
+inherit′ Γ (`suc M)                      (A  ⇒′ B) = no (λ ())
+inherit′ Γ (`suc M)                      (A `×′ B) = no (λ ())
+inherit′ Γ `case L [zero⇒ M |suc x ⇒ N ] C         with synthesize′ Γ L
+... | no  ¬∃                                       = no (λ{ (⊢case ⊢L _ _) → ¬∃ ⟨ _ , ⊢L ⟩ })
+... | yes ⟨ A  ⇒′ B , ⊢L ⟩                         = no (λ{ (⊢case ⊢L′ _ _) → ℕ≢⇒′ (uniq-↑′ ⊢L′ ⊢L) })
+... | yes ⟨ A `×′ B , ⊢L ⟩                         = no (λ{ (⊢case ⊢L′ _ _) → ℕ≢*′ (uniq-↑′ ⊢L′ ⊢L) })
+... | yes ⟨ `ℕ      , ⊢L ⟩ with inherit′ Γ M C | inherit′ (Γ , x ⦂ `ℕ) N C
+...   | no ¬⊢M | _                                 = no (λ{ (⊢case _ ⊢M _) → ¬⊢M ⊢M })
+...   | _      | no ¬⊢N                            = no (λ{ (⊢case _ _ ⊢N) → ¬⊢N ⊢N })
+...   | yes ⊢M | yes ⊢N                            = yes (⊢case ⊢L ⊢M ⊢N)
+inherit′ Γ (μ x ⇒ M)                     C         with inherit′ (Γ , x ⦂ C) M C
+... | no ¬⊢M                                       = no (λ{ (⊢μ ⊢M) → ¬⊢M ⊢M })
+... | yes ⊢M                                       = yes (⊢μ ⊢M)
+inherit′ Γ `⟨ M , N ⟩                    `ℕ        = no (λ ())
+inherit′ Γ `⟨ M , N ⟩                    (A  ⇒′ B) = no (λ ())
+inherit′ Γ `⟨ M , N ⟩                    (A `×′ B) with inherit′ Γ M A | inherit′ Γ N B
+... | no ¬⊢M | _                                   = no (λ{ `⟨ ⊢M , _ ⟩ → ¬⊢M ⊢M })
+... | _      | no ¬⊢N                              = no (λ{ `⟨ _ , ⊢N ⟩ → ¬⊢N ⊢N })
+... | yes ⊢M | yes ⊢N                              = yes `⟨ ⊢M , ⊢N ⟩
+inherit′ Γ `case× L [⟨ x , y ⟩⇒ M ]      C         with synthesize′ Γ L
+... | no  ¬∃                                       = no (λ{ (⊢case× ⊢L _) → ¬∃ ⟨ _ , ⊢L ⟩ })
+... | yes ⟨ `ℕ      , ⊢L ⟩                         = no (λ{ (⊢case× ⊢L′ _) → ℕ≢*′ (uniq-↑′ ⊢L ⊢L′) })
+... | yes ⟨ A  ⇒′ B , ⊢L ⟩                         = no (λ{ (⊢case× ⊢L′ _) → ⇒′≢*′ (uniq-↑′ ⊢L ⊢L′) })
+... | yes ⟨ A `×′ B , ⊢L ⟩ with inherit′ (Γ , x ⦂ A , y ⦂ B) M C
+...   | no ¬⊢M                                     = no (λ{ ⊢K → ¬body′ ⊢L ¬⊢M ⊢K })
+...   | yes ⊢M                                     = yes (⊢case× ⊢L ⊢M)
+inherit′ Γ (M ↑)                         A         with synthesize′ Γ M
+... | no  ¬∃                                       = no (λ{ (⊢↑ ⊢M′ _) → ¬∃ ⟨ _ , ⊢M′ ⟩ })
+... | yes ⟨ B , ⊢M ⟩ with A ≟Tp′ B
+...   | no  A≢B                                    = no (λ{ (⊢↑ ⊢M′ refl) → A≢B (uniq-↑′ ⊢M′ ⊢M) })
+...   | yes refl                                   = yes (⊢↑ ⊢M refl)
 ```
 
 #### Exercise `inference-rest` (stretch)
@@ -1098,7 +1572,419 @@ Extend the bidirectional type rules to include the rest of the constructs from
 Chapter [More](/More/).
 
 ```
--- Your code goes here
+_≟Tp′′_ : (A B : Type′′) → Dec (A ≡ B)
+`ℕ         ≟Tp′′ `ℕ           = yes refl
+`ℕ         ≟Tp′′ (A   ⇒′′ B)  = no λ()
+`ℕ         ≟Tp′′ (A  `×′′ B)  = no (λ ())
+`ℕ         ≟Tp′′ (A  `⊎   B)  = no (λ ())
+`ℕ         ≟Tp′′ `⊤           = no (λ ())
+`ℕ         ≟Tp′′ `⊥           = no (λ ())
+`ℕ         ≟Tp′′ `List A′     = no (λ ())
+(A  ⇒′′ B) ≟Tp′′ `ℕ           = no λ()
+(A  ⇒′′ B) ≟Tp′′ (A′  ⇒′′ B′)
+  with A ≟Tp′′ A′ | B ≟Tp′′ B′
+...  | no  A≢   | _           = no λ{refl → A≢ refl}
+...  | yes _    | no  B≢      = no λ{refl → B≢ refl}
+...  | yes refl | yes refl    = yes refl
+(A  ⇒′′ B) ≟Tp′′ (A′ `×′′ B′) = no (λ ())
+(A  ⇒′′ B) ≟Tp′′ (A′ `⊎   B′) = no (λ ())
+(A  ⇒′′ B) ≟Tp′′ `⊤           = no (λ ())
+(A  ⇒′′ B) ≟Tp′′ `⊥           = no (λ ())
+(A  ⇒′′ B) ≟Tp′′ `List A′     = no (λ ())
+(A `×′′ B) ≟Tp′′ `ℕ           = no (λ ())
+(A `×′′ B) ≟Tp′′ (A′  ⇒′′ B′) = no (λ ())
+(A `×′′ B) ≟Tp′′ (A′ `×′′ B′)
+  with A ≟Tp′′ A′ | B ≟Tp′′ B′
+...  | no  A≢   | _           = no λ{refl → A≢ refl}
+...  | yes _    | no  B≢      = no λ{refl → B≢ refl}
+...  | yes refl | yes refl    = yes refl
+(A `×′′ B) ≟Tp′′ (A′ `⊎   B′) = no (λ ())
+(A `×′′ B) ≟Tp′′ `⊤           = no (λ ())
+(A `×′′ B) ≟Tp′′ `⊥           = no (λ ())
+(A `×′′ B) ≟Tp′′ `List A′     = no (λ ())
+(A `⊎   B) ≟Tp′′ `ℕ           = no (λ ())
+(A `⊎   B) ≟Tp′′ (A′  ⇒′′ B′) = no (λ ())
+(A `⊎   B) ≟Tp′′ (A′ `×′′ B′) = no (λ ())
+(A `⊎   B) ≟Tp′′ (A′ `⊎   B′)
+  with A ≟Tp′′ A′ | B ≟Tp′′ B′
+...  | no  A≢   | _           = no λ{refl → A≢ refl}
+...  | yes _    | no  B≢      = no λ{refl → B≢ refl}
+...  | yes refl | yes refl    = yes refl
+(A `⊎   B) ≟Tp′′ `⊤           = no (λ ())
+(A `⊎   B) ≟Tp′′ `⊥           = no (λ ())
+(A `⊎   B) ≟Tp′′ `List A′     = no (λ ())
+`⊤         ≟Tp′′ `ℕ           = no (λ ())
+`⊤         ≟Tp′′ (A′  ⇒′′ B′) = no (λ ())
+`⊤         ≟Tp′′ (A′ `×′′ B′) = no (λ ())
+`⊤         ≟Tp′′ (A′ `⊎   B′) = no (λ ())
+`⊤         ≟Tp′′ `⊤           = yes refl
+`⊤         ≟Tp′′ `⊥           = no (λ ())
+`⊤         ≟Tp′′ `List A′     = no (λ ())
+`⊥         ≟Tp′′ `ℕ           = no (λ ())
+`⊥         ≟Tp′′ (A′  ⇒′′ B′) = no (λ ())
+`⊥         ≟Tp′′ (A′ `×′′ B′) = no (λ ())
+`⊥         ≟Tp′′ (A′ `⊎   B′) = no (λ ())
+`⊥         ≟Tp′′ `⊤           = no (λ ())
+`⊥         ≟Tp′′ `⊥           = yes refl
+`⊥         ≟Tp′′ `List A′     = no (λ ())
+`List A    ≟Tp′′ `ℕ           = no (λ ())
+`List A    ≟Tp′′ (A′  ⇒′′ B′) = no (λ ())
+`List A    ≟Tp′′ (A′ `×′′ B′) = no (λ ())
+`List A    ≟Tp′′ (A′ `⊎   B′) = no (λ ())
+`List A    ≟Tp′′ `⊤           = no (λ ())
+`List A    ≟Tp′′ `⊥           = no (λ ())
+`List A    ≟Tp′′ `List A′
+  with A ≟Tp′′ A′
+...  | no  A≢   = no λ{ refl → A≢ refl }
+...  | yes refl = yes refl
+
+dom′′≡ : ∀ {A A′ B B′} → A ⇒′′ B ≡ A′ ⇒′′ B′ → A ≡ A′
+dom′′≡ refl = refl
+
+rng′′≡ : ∀ {A A′ B B′} → A ⇒′′ B ≡ A′ ⇒′′ B′ → B ≡ B′
+rng′′≡ refl = refl
+
+fst′′≡ : ∀ {A A′ B B′} → A `×′′ B ≡ A′ `×′′ B′ → A ≡ A′
+fst′′≡ refl = refl
+
+snd′′≡ : ∀ {A A′ B B′} → A `×′′ B ≡ A′ `×′′ B′ → B ≡ B′
+snd′′≡ refl = refl
+
+left′′≡ : ∀ {A A′ B B′} → A `⊎ B ≡ A′ `⊎ B′ → A ≡ A′
+left′′≡ refl = refl
+
+right′′≡ : ∀ {A A′ B B′} → A `⊎ B ≡ A′ `⊎ B′ → B ≡ B′
+right′′≡ refl = refl
+
+item′′≡ : ∀ {A A′} → `List A ≡ `List A′ → A ≡ A′
+item′′≡ refl = refl
+
+ℕ≢⇒′′ : ∀ {A B} → `ℕ ≢ A ⇒′′ B
+ℕ≢⇒′′ ()
+
+ℕ≢*′′ : ∀ {A B} → `ℕ ≢ A `×′′ B
+ℕ≢*′′ ()
+
+ℕ≢⊎ : ∀ {A B} → `ℕ ≢ A `⊎ B
+ℕ≢⊎ ()
+
+ℕ≢⊤ : `ℕ ≢ `⊤
+ℕ≢⊤ ()
+
+ℕ≢⊥ : `ℕ ≢ `⊥
+ℕ≢⊥ ()
+
+ℕ≢List : ∀ {A} → `ℕ ≢ `List A
+ℕ≢List ()
+
+⇒′′≢*′′ : ∀ {A B C D} → A ⇒′′ B ≢ C `×′′ D
+⇒′′≢*′′ ()
+
+⇒′′≢⊎ : ∀ {A B C D} → A ⇒′′ B ≢ C `⊎ D
+⇒′′≢⊎ ()
+
+⇒′′≢⊤ : ∀ {A B} → A ⇒′′ B ≢ `⊤
+⇒′′≢⊤ ()
+
+⇒′′≢⊥ : ∀ {A B} → A ⇒′′ B ≢ `⊥
+⇒′′≢⊥ ()
+
+⇒′′≢List : ∀ {A B C} → A ⇒′′ B ≢ `List C
+⇒′′≢List ()
+
+*′′≢⊎ : ∀ {A B C D} → A `×′′ B ≢ C `⊎ D
+*′′≢⊎ ()
+
+*′′≢⊤ : ∀ {A B} → A `×′′ B ≢ `⊤
+*′′≢⊤ ()
+
+*′′≢⊥ : ∀ {A B} → A `×′′ B ≢ `⊥
+*′′≢⊥ ()
+
+*′′≢List : ∀ {A B C} → A `×′′ B ≢ `List C
+*′′≢List ()
+
+⊎≢⊤ : ∀ {A B} → A `⊎ B ≢ `⊤
+⊎≢⊤ ()
+
+⊎≢⊥ : ∀ {A B} → A `⊎ B ≢ `⊥
+⊎≢⊥ ()
+
+⊎≢List : ∀ {A B C} → A `⊎ B ≢ `List C
+⊎≢List ()
+
+⊤≢⊥ : `⊤ ≢ `⊥
+⊤≢⊥ ()
+
+⊤≢List : ∀ {A} → `⊤ ≢ `List A
+⊤≢List ()
+
+⊥≢List : ∀ {A} → `⊥ ≢ `List A
+⊥≢List ()
+
+uniq-∋′′ : ∀ {Γ x A B} → Γ ∋ x ⦂′′ A → Γ ∋ x ⦂′′ B → A ≡ B
+uniq-∋′′ Z          Z           = refl
+uniq-∋′′ Z          (S x≢y _)   = ⊥-elim (x≢y refl)
+uniq-∋′′ (S x≢y _)  Z           = ⊥-elim (x≢y refl)
+uniq-∋′′ (S _   ∋x) (S _   ∋x′) = uniq-∋′′ ∋x ∋x′
+
+uniq-↑′′ : ∀ {Γ M A B} → Γ ⊢ M ↑′′ A → Γ ⊢ M ↑′′ B → A ≡ B
+uniq-↑′′ (⊢` ∋x)     (⊢` ∋x′)     = uniq-∋′′ ∋x ∋x′
+uniq-↑′′ (⊢L · ⊢M)   (⊢L′ · ⊢M′)  = rng′′≡ (uniq-↑′′ ⊢L ⊢L′)
+uniq-↑′′ (⊢↓ ⊢M)     (⊢↓ ⊢M′)     = refl
+uniq-↑′′ (⊢proj₁ ⊢M) (⊢proj₁ ⊢M′) = fst′′≡ (uniq-↑′′ ⊢M ⊢M′)
+uniq-↑′′ (⊢proj₂ ⊢M) (⊢proj₂ ⊢M′) = snd′′≡ (uniq-↑′′ ⊢M ⊢M′)
+
+ext∋′′ : ∀ {Γ B x y}
+  → x ≢ y
+  → ¬ ∃[ A ]( Γ ∋ x ⦂′′ A )
+    -----------------------------
+  → ¬ ∃[ A ]( Γ , y ⦂ B ∋ x ⦂′′ A )
+ext∋′′ x≢y _  ⟨ A , Z ⟩      = x≢y refl
+ext∋′′ _   ¬∃ ⟨ A , S _ ∋x ⟩ = ¬∃ ⟨ A , ∋x ⟩
+
+lookup′′ : ∀ (Γ : Context′′) (x : Id)
+    -----------------------
+  → Dec (∃[ A ](Γ ∋ x ⦂′′ A))
+lookup′′ ∅ x                     = no  (λ ())
+lookup′′ (Γ , y ⦂ B) x with x ≟ y
+... | yes refl                   = yes ⟨ B , Z ⟩
+... | no x≢y with lookup′′ Γ x
+...             | no  ¬∃         = no  (ext∋′′ x≢y ¬∃)
+...             | yes ⟨ A , ∋x ⟩ = yes ⟨ A , S x≢y ∋x ⟩
+
+¬arg′′ : ∀ {Γ A B L M}
+  → Γ ⊢ L ↑′′ A ⇒′′ B
+  → ¬ Γ ⊢ M ↓′′ A
+    -------------------------
+  → ¬ ∃[ B′ ](Γ ⊢ L · M ↑′′ B′)
+¬arg′′ ⊢L ¬⊢M ⟨ B′ , ⊢L′ · ⊢M′ ⟩ rewrite dom′′≡ (uniq-↑′′ ⊢L ⊢L′) = ¬⊢M ⊢M′
+
+¬case×-body′′ : ∀ {Γ A B C L x y M}
+  → Γ ⊢ L ↑′′ A `×′′ B
+  → ¬ Γ , x ⦂ A , y ⦂ B ⊢ M ↓′′ C
+    -------------------------
+  → ¬ (Γ ⊢ `case× L [⟨ x , y ⟩⇒ M ] ↓′′ C)
+¬case×-body′′ ⊢L ¬⊢M (⊢case× ⊢L′ ⊢M′) rewrite fst′′≡ (uniq-↑′′ ⊢L ⊢L′) | snd′′≡ (uniq-↑′′ ⊢L ⊢L′) = ¬⊢M ⊢M′
+
+¬case⊎-body₁′′ : ∀ {Γ A B C L x M y N}
+  → Γ ⊢ L ↑′′ A `⊎ B
+  → ¬ Γ , x ⦂ A ⊢ M ↓′′ C
+    -------------------------
+  → ¬ (Γ ⊢ `case⊎ L [inj₁ x ⇒ M |inj₂ y ⇒ N ] ↓′′ C)
+¬case⊎-body₁′′ ⊢L ¬⊢M (⊢case⊎ ⊢L′ ⊢M′ ⊢N′) rewrite left′′≡ (uniq-↑′′ ⊢L ⊢L′) = ¬⊢M ⊢M′
+
+¬case⊎-body₂′′ : ∀ {Γ A B C L x M y N}
+  → Γ ⊢ L ↑′′ A `⊎ B
+  → ¬ Γ , y ⦂ B ⊢ N ↓′′ C
+    -------------------------
+  → ¬ (Γ ⊢ `case⊎ L [inj₁ x ⇒ M |inj₂ y ⇒ N ] ↓′′ C)
+¬case⊎-body₂′′ ⊢L ¬⊢N (⊢case⊎ ⊢L′ ⊢M′ ⊢N′) rewrite right′′≡ (uniq-↑′′ ⊢L ⊢L′) = ¬⊢N ⊢N′
+
+¬caseL-body′′ : ∀ {Γ A B L M x y N}
+  → Γ ⊢ L ↑′′ `List A
+  → ¬ Γ , x ⦂ A , y ⦂ `List A ⊢ N ↓′′ B
+    -------------------------
+  → ¬ (Γ ⊢ `caseL L [[]⇒ M |` x ∷ y ⇒ N ] ↓′′ B)
+¬caseL-body′′ ⊢L ¬⊢N (⊢caseL ⊢L′ ⊢M′ ⊢N′) rewrite item′′≡ (uniq-↑′′ ⊢L ⊢L′) = ¬⊢N ⊢N′
+
+synthesize′′ : ∀ (Γ : Context′′) (M : Term⁺′′)
+    -----------------------
+  → Dec (∃[ A ](Γ ⊢ M ↑′′ A))
+
+inherit′′ : ∀ (Γ : Context′′) (M : Term⁻′′) (A : Type′′)
+    ---------------
+  → Dec (Γ ⊢ M ↓′′ A)
+
+synthesize′′ Γ (` x)      with lookup′′ Γ x
+... | yes ⟨ _ , ∋x ⟩        = yes ⟨ _ , ⊢` ∋x ⟩
+... | no  ¬∃                = no (λ{ ⟨ _ , ⊢` ∋x ⟩ → ¬∃ ⟨ _ , ∋x ⟩ })
+synthesize′′ Γ (M · N)    with synthesize′′ Γ M
+... | no  ¬∃                = no (λ{ ⟨ _ , ⊢M′ · _ ⟩ → ¬∃ ⟨ _ , ⊢M′ ⟩ })
+... | yes ⟨ `ℕ       , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢M′ · _ ⟩ → ℕ≢⇒′′ (uniq-↑′′ ⊢M ⊢M′) })
+... | yes ⟨ A `×′′ B , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢M′ · _ ⟩ → ⇒′′≢*′′ (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ A `⊎ A₁  , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢M′ · _ ⟩ → ⇒′′≢⊎ (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ `⊤       , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢M′ · _ ⟩ → ⇒′′≢⊤ (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ `⊥       , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢M′ · _ ⟩ → ⇒′′≢⊥ (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ `List A  , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢M′ · _ ⟩ → ⇒′′≢List (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ A  ⇒′′ B , ⊢M ⟩ with inherit′′ Γ N A
+...   | no  ¬∃              = no (λ{ ⟨ _ , ⊢M′ ⟩ → ¬arg′′ ⊢M ¬∃ ⟨ _ , ⊢M′ ⟩ })
+...   | yes ⊢N              = yes ⟨ B , ⊢M · ⊢N ⟩
+synthesize′′ Γ (`proj₁ M) with synthesize′′ Γ M
+... | no  ¬∃                = no (λ{ ⟨ _ , ⊢proj₁ ⊢M′ ⟩ → ¬∃ ⟨ _ , ⊢M′ ⟩ })
+... | yes ⟨ `ℕ       , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₁ ⊢M′ ⟩ → ℕ≢*′′ (uniq-↑′′ ⊢M ⊢M′) })
+... | yes ⟨ A  ⇒′′ B , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₁ ⊢M′ ⟩ → ⇒′′≢*′′ (uniq-↑′′ ⊢M ⊢M′) })
+... | yes ⟨ A `⊎   B , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₁ ⊢M′ ⟩ → *′′≢⊎ (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ `⊤       , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₁ ⊢M′ ⟩ → *′′≢⊤ (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ `⊥       , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₁ ⊢M′ ⟩ → *′′≢⊥ (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ `List A  , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₁ ⊢M′ ⟩ → *′′≢List (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ A `×′′ B , ⊢M ⟩ = yes ⟨ A , ⊢proj₁ ⊢M ⟩
+synthesize′′ Γ (`proj₂ M) with synthesize′′ Γ M
+... | no  ¬∃                = no (λ{ ⟨ _ , ⊢proj₂ ⊢M′ ⟩ → ¬∃ ⟨ _ , ⊢M′ ⟩ })
+... | yes ⟨ `ℕ       , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₂ ⊢M′ ⟩ → ℕ≢*′′ (uniq-↑′′ ⊢M ⊢M′) })
+... | yes ⟨ A  ⇒′′ B , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₂ ⊢M′ ⟩ → ⇒′′≢*′′ (uniq-↑′′ ⊢M ⊢M′) })
+... | yes ⟨ A `⊎   B , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₂ ⊢M′ ⟩ → *′′≢⊎ (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ `⊤       , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₂ ⊢M′ ⟩ → *′′≢⊤ (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ `⊥       , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₂ ⊢M′ ⟩ → *′′≢⊥ (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ `List A  , ⊢M ⟩ = no (λ{ ⟨ _ , ⊢proj₂ ⊢M′ ⟩ → *′′≢List (uniq-↑′′ ⊢M′ ⊢M) })
+... | yes ⟨ A `×′′ B , ⊢M ⟩ = yes ⟨ B , ⊢proj₂ ⊢M ⟩
+synthesize′′ Γ (M ↓ A)    with inherit′′ Γ M A
+... | no ¬⊢M                = no (λ{ ⟨ _ , ⊢↓ ⊢M ⟩ → ¬⊢M ⊢M })
+... | yes ⊢M                = yes ⟨ A , ⊢↓ ⊢M ⟩
+
+
+inherit′′ Γ (ƛ x ⇒ M)                          `ℕ         = no (λ ())
+inherit′′ Γ (ƛ x ⇒ M)                          (A  ⇒′′ B) with inherit′′ (Γ , x ⦂ A) M B
+... | no ¬⊢M = no (λ{ (⊢ƛ ⊢M) → ¬⊢M ⊢M })
+... | yes ⊢M = yes (⊢ƛ ⊢M)
+inherit′′ Γ (ƛ x ⇒ M)                          (A `×′′ B) = no (λ ())
+inherit′′ Γ (ƛ x ⇒ M)                          (A `⊎   B) = no (λ ())
+inherit′′ Γ (ƛ x ⇒ M)                          `⊤         = no (λ ())
+inherit′′ Γ (ƛ x ⇒ M)                          `⊥         = no (λ ())
+inherit′′ Γ (ƛ x ⇒ M)                          (`List A)  = no (λ ())
+inherit′′ Γ `zero                              `ℕ         = yes ⊢zero
+inherit′′ Γ `zero                              (A  ⇒′′ B) = no (λ ())
+inherit′′ Γ `zero                              (A `×′′ B) = no (λ ())
+inherit′′ Γ `zero                              (A `⊎   B) = no (λ ())
+inherit′′ Γ `zero                              `⊤         = no (λ ())
+inherit′′ Γ `zero                              `⊥         = no (λ ())
+inherit′′ Γ `zero                              (`List A)  = no (λ ())
+inherit′′ Γ (`suc M)                           `ℕ         with inherit′′ Γ M `ℕ
+... | no ¬⊢M = no (λ{ (⊢suc ⊢M) → ¬⊢M ⊢M })
+... | yes ⊢M = yes (⊢suc ⊢M)
+inherit′′ Γ (`suc M)                           (A  ⇒′′ B) = no (λ ())
+inherit′′ Γ (`suc M)                           (A `×′′ B) = no (λ ())
+inherit′′ Γ (`suc M)                           (A `⊎   B) = no (λ ())
+inherit′′ Γ (`suc M)                           `⊤         = no (λ ())
+inherit′′ Γ (`suc M)                           `⊥         = no (λ ())
+inherit′′ Γ (`suc M)                           (`List A)  = no (λ ())
+inherit′′ Γ `case L [zero⇒ M |suc x ⇒ N ]      C          with synthesize′′ Γ L
+... | no  ¬∃                                              = no (λ{ (⊢case ⊢L _ _) → ¬∃ ⟨ _ , ⊢L ⟩ })
+... | yes ⟨ A  ⇒′′ B , ⊢L ⟩                               = no (λ{ (⊢case ⊢L′ _ _) → ℕ≢⇒′′ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ A `×′′ B , ⊢L ⟩                               = no (λ{ (⊢case ⊢L′ _ _) → ℕ≢*′′ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ A `⊎   B , ⊢L ⟩                               = no (λ{ (⊢case ⊢L′ _ _) → ℕ≢⊎ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `⊤       , ⊢L ⟩                               = no (λ{ (⊢case ⊢L′ _ _) → ℕ≢⊤ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `⊥       , ⊢L ⟩                               = no (λ{ (⊢case ⊢L′ _ _) → ℕ≢⊥ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `List A  , ⊢L ⟩                               = no (λ{ (⊢case ⊢L′ _ _) → ℕ≢List (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `ℕ       , ⊢L ⟩ with inherit′′ Γ M C | inherit′′ (Γ , x ⦂ `ℕ) N C
+...   | no ¬⊢M | _                                        = no (λ{ (⊢case _ ⊢M _) → ¬⊢M ⊢M })
+...   | _      | no ¬⊢N                                   = no (λ{ (⊢case _ _ ⊢N) → ¬⊢N ⊢N })
+...   | yes ⊢M | yes ⊢N                                   = yes (⊢case ⊢L ⊢M ⊢N)
+inherit′′ Γ (μ x ⇒ M)                          C          with inherit′′ (Γ , x ⦂ C) M C
+... | no ¬⊢M = no (λ{ (⊢μ ⊢M) → ¬⊢M ⊢M })
+... | yes ⊢M = yes (⊢μ ⊢M)
+inherit′′ Γ `⟨ M , N ⟩                         `ℕ         = no (λ ())
+inherit′′ Γ `⟨ M , N ⟩                         (A  ⇒′′ B) = no (λ ())
+inherit′′ Γ `⟨ M , N ⟩                         (A `×′′ B) with inherit′′ Γ M A | inherit′′ Γ N B
+... | no ¬⊢M | _      = no (λ{ `⟨ ⊢M , _ ⟩ → ¬⊢M ⊢M })
+... | _      | no ¬⊢N = no (λ{ `⟨ _ , ⊢N ⟩ → ¬⊢N ⊢N })
+... | yes ⊢M | yes ⊢N = yes `⟨ ⊢M , ⊢N ⟩
+inherit′′ Γ `⟨ M , N ⟩                         (A `⊎   B) = no (λ ())
+inherit′′ Γ `⟨ M , N ⟩                         `⊤         = no (λ ())
+inherit′′ Γ `⟨ M , N ⟩                         `⊥         = no (λ ())
+inherit′′ Γ `⟨ M , N ⟩                         (`List A)  = no (λ ())
+inherit′′ Γ `case× L [⟨ x , y ⟩⇒ M ]           C          with synthesize′′ Γ L
+... | no  ¬∃                                              = no (λ{ (⊢case× ⊢L _) → ¬∃ ⟨ _ , ⊢L ⟩ })
+... | yes ⟨ `ℕ       , ⊢L ⟩                               = no (λ{ (⊢case× ⊢L′ _) → ℕ≢*′′ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A  ⇒′′ B , ⊢L ⟩                               = no (λ{ (⊢case× ⊢L′ _) → ⇒′′≢*′′ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A `⊎   B , ⊢L ⟩                               = no (λ{ (⊢case× ⊢L′ _) → *′′≢⊎ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `⊤       , ⊢L ⟩                               = no (λ{ (⊢case× ⊢L′ _) → *′′≢⊤ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `⊥       , ⊢L ⟩                               = no (λ{ (⊢case× ⊢L′ _) → *′′≢⊥ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `List A  , ⊢L ⟩                               = no (λ{ (⊢case× ⊢L′ _) → *′′≢List (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ A `×′′ B , ⊢L ⟩ with inherit′′ (Γ , x ⦂ A , y ⦂ B) M C
+...   | no ¬⊢M                                            = no (λ{ ⊢K → ¬case×-body′′ ⊢L ¬⊢M ⊢K })
+...   | yes ⊢M                                            = yes (⊢case× ⊢L ⊢M)
+inherit′′ Γ (`inj₁ M)                          `ℕ         = no (λ ())
+inherit′′ Γ (`inj₁ M)                          (A  ⇒′′ B) = no (λ ())
+inherit′′ Γ (`inj₁ M)                          (A `×′′ B) = no (λ ())
+inherit′′ Γ (`inj₁ M)                          (A `⊎   B) with inherit′′ Γ M A
+... | no ¬⊢M = no (λ{ (⊢inj₁ ⊢M) → ¬⊢M ⊢M })
+... | yes ⊢M = yes (⊢inj₁ ⊢M)
+inherit′′ Γ (`inj₁ M)                          `⊤         = no (λ ())
+inherit′′ Γ (`inj₁ M)                          `⊥         = no (λ ())
+inherit′′ Γ (`inj₁ M)                          (`List A)  = no (λ ())
+inherit′′ Γ (`inj₂ N)                          `ℕ         = no (λ ())
+inherit′′ Γ (`inj₂ N)                          (A  ⇒′′ B) = no (λ ())
+inherit′′ Γ (`inj₂ N)                          (A `×′′ B) = no (λ ())
+inherit′′ Γ (`inj₂ N)                          (A `⊎   B) with inherit′′ Γ N B
+... | no ¬⊢N = no (λ{ (⊢inj₂ ⊢N) → ¬⊢N ⊢N })
+... | yes ⊢N = yes (⊢inj₂ ⊢N)
+inherit′′ Γ (`inj₂ N)                          `⊤         = no (λ ())
+inherit′′ Γ (`inj₂ N)                          `⊥         = no (λ ())
+inherit′′ Γ (`inj₂ N)                          (`List A)  = no (λ ())
+inherit′′ Γ `case⊎ L [inj₁ x ⇒ M |inj₂ y ⇒ N ] C          with synthesize′′ Γ L
+... | no ¬∃ = no (λ{ (⊢case⊎ ⊢L _ _) → ¬∃ ⟨ _ , ⊢L ⟩ })
+... | yes ⟨ `ℕ       , ⊢L ⟩                               = no (λ{ (⊢case⊎ ⊢L′ _ _) → ℕ≢⊎ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A  ⇒′′ B , ⊢L ⟩                               = no (λ{ (⊢case⊎ ⊢L′ _ _) → ⇒′′≢⊎ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A `×′′ B , ⊢L ⟩                               = no (λ{ (⊢case⊎ ⊢L′ _ _) → *′′≢⊎ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ `⊤       , ⊢L ⟩                               = no (λ{ (⊢case⊎ ⊢L′ _ _) → ⊎≢⊤ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `⊥       , ⊢L ⟩                               = no (λ{ (⊢case⊎ ⊢L′ _ _) → ⊎≢⊥ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `List A  , ⊢L ⟩                               = no (λ{ (⊢case⊎ ⊢L′ _ _) → ⊎≢List (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ A `⊎   B , ⊢L ⟩ with inherit′′ (Γ , x ⦂ A) M C | inherit′′ (Γ , y ⦂ B) N C
+...   | no ¬⊢M | _      = no (λ{ ⊢K → ¬case⊎-body₁′′ ⊢L ¬⊢M ⊢K })
+...   | _      | no ¬⊢N = no (λ{ ⊢K → ¬case⊎-body₂′′ ⊢L ¬⊢N ⊢K })
+...   | yes ⊢M | yes ⊢N = yes (⊢case⊎ ⊢L ⊢M ⊢N)
+inherit′′ Γ `tt                                `ℕ         = no (λ ())
+inherit′′ Γ `tt                                (A  ⇒′′ B) = no (λ ())
+inherit′′ Γ `tt                                (A `×′′ B) = no (λ ())
+inherit′′ Γ `tt                                (A `⊎   B) = no (λ ())
+inherit′′ Γ `tt                                `⊤         = yes ⊢tt
+inherit′′ Γ `tt                                `⊥         = no (λ ())
+inherit′′ Γ `tt                                (`List A)  = no (λ ())
+inherit′′ Γ `case⊤ L [tt⇒ M ]                  C          with synthesize′′ Γ L
+... | no ¬∃                                               = no (λ{ (⊢case⊤ ⊢L _) → ¬∃ ⟨ _ , ⊢L ⟩ })
+... | yes ⟨ `ℕ       , ⊢L ⟩                               = no (λ{ (⊢case⊤ ⊢L′ _) → ℕ≢⊤ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A  ⇒′′ B , ⊢L ⟩                               = no (λ{ (⊢case⊤ ⊢L′ _) → ⇒′′≢⊤ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A `×′′ B , ⊢L ⟩                               = no (λ{ (⊢case⊤ ⊢L′ _) → *′′≢⊤ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A `⊎   B , ⊢L ⟩                               = no (λ{ (⊢case⊤ ⊢L′ _) → ⊎≢⊤ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ `⊥       , ⊢L ⟩                               = no (λ{ (⊢case⊤ ⊢L′ _) → ⊤≢⊥ (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `List A  , ⊢L ⟩                               = no (λ{ (⊢case⊤ ⊢L′ _) → ⊤≢List (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `⊤       , ⊢L ⟩ with inherit′′ Γ M C
+...   | no ¬⊢M                                            = no (λ{ (⊢case⊤ _ ⊢M) → ¬⊢M ⊢M })
+...   | yes ⊢M                                            = yes (⊢case⊤ ⊢L ⊢M)
+inherit′′ Γ `case⊥ L []                        C          with synthesize′′ Γ L
+... | no ¬∃                                               = no (λ{ (⊢case⊥ ⊢L) → ¬∃ ⟨ _ , ⊢L ⟩ })
+... | yes ⟨ `ℕ       , ⊢L ⟩                               = no (λ{ (⊢case⊥ ⊢L′) → ℕ≢⊥ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A  ⇒′′ B , ⊢L ⟩                               = no (λ{ (⊢case⊥ ⊢L′) → ⇒′′≢⊥ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A `×′′ B , ⊢L ⟩                               = no (λ{ (⊢case⊥ ⊢L′) → *′′≢⊥ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A `⊎   B , ⊢L ⟩                               = no (λ{ (⊢case⊥ ⊢L′) → ⊎≢⊥ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ `⊤       , ⊢L ⟩                               = no (λ{ (⊢case⊥ ⊢L′) → ⊤≢⊥ (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ `List A  , ⊢L ⟩                               = no (λ{ (⊢case⊥ ⊢L′) → ⊥≢List (uniq-↑′′ ⊢L′ ⊢L) })
+... | yes ⟨ `⊥       , ⊢L ⟩                               = yes (⊢case⊥ ⊢L)
+inherit′′ Γ `[]                                `ℕ         = no (λ ())
+inherit′′ Γ `[]                                (A  ⇒′′ B) = no (λ ())
+inherit′′ Γ `[]                                (A `×′′ B) = no (λ ())
+inherit′′ Γ `[]                                (A `⊎   B) = no (λ ())
+inherit′′ Γ `[]                                `⊤         = no (λ ())
+inherit′′ Γ `[]                                `⊥         = no (λ ())
+inherit′′ Γ `[]                                (`List A)  = yes ⊢[]
+inherit′′ Γ (M `∷ N)                           `ℕ         = no (λ ())
+inherit′′ Γ (M `∷ N)                           (A  ⇒′′ B) = no (λ ())
+inherit′′ Γ (M `∷ N)                           (A `×′′ B) = no (λ ())
+inherit′′ Γ (M `∷ N)                           (A `⊎   B) = no (λ ())
+inherit′′ Γ (M `∷ N)                           `⊤         = no (λ ())
+inherit′′ Γ (M `∷ N)                           `⊥         = no (λ ())
+inherit′′ Γ (M `∷ N)                           (`List A)  with inherit′′ Γ M A | inherit′′ Γ N (`List A)
+... | no ¬⊢M | _                                          = no (λ{ (⊢M `∷ _) → ¬⊢M ⊢M })
+... | _      | no ¬⊢N                                     = no (λ{ (_ `∷ ⊢N) → ¬⊢N ⊢N })
+... | yes ⊢M | yes ⊢N                                     = yes (⊢M `∷ ⊢N)
+inherit′′ Γ `caseL L [[]⇒ M |` x ∷ y ⇒ N ]     C          with synthesize′′ Γ L
+... | no ¬∃                                               = no (λ{ (⊢caseL ⊢L _ _) → ¬∃ ⟨ _ , ⊢L ⟩ })
+... | yes ⟨ `ℕ       , ⊢L ⟩                               = no (λ{ (⊢caseL ⊢L′ _ _) → ℕ≢List (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A  ⇒′′ B , ⊢L ⟩                               = no (λ{ (⊢caseL ⊢L′ _ _) → ⇒′′≢List (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A `×′′ B , ⊢L ⟩                               = no (λ{ (⊢caseL ⊢L′ _ _) → *′′≢List (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ A `⊎   B , ⊢L ⟩                               = no (λ{ (⊢caseL ⊢L′ _ _) → ⊎≢List (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ `⊤       , ⊢L ⟩                               = no (λ{ (⊢caseL ⊢L′ _ _) → ⊤≢List (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ `⊥       , ⊢L ⟩                               = no (λ{ (⊢caseL ⊢L′ _ _) → ⊥≢List (uniq-↑′′ ⊢L ⊢L′) })
+... | yes ⟨ `List A  , ⊢L ⟩ with inherit′′ Γ M C | inherit′′ (Γ , x ⦂ A , y ⦂ `List A) N C
+...   | no ¬⊢M | _      = no (λ{ (⊢caseL _ ⊢M _) → ¬⊢M ⊢M })
+...   | _      | no ¬⊢N = no (λ{ ⊢K → ¬caseL-body′′ ⊢L ¬⊢N ⊢K })
+...   | yes ⊢M | yes ⊢N = yes (⊢caseL ⊢L ⊢M ⊢N)
+inherit′′ Γ (M ↑)                              A          with synthesize′′ Γ M
+... | no  ¬∃                                              = no (λ{ (⊢↑ ⊢M′ _) → ¬∃ ⟨ _ , ⊢M′ ⟩ })
+... | yes ⟨ B , ⊢M ⟩ with A ≟Tp′′ B
+...   | no  A≢B                                           = no (λ{ (⊢↑ ⊢M′ refl) → A≢B (uniq-↑′′ ⊢M′ ⊢M) })
+...   | yes refl                                          = yes (⊢↑ ⊢M refl)
 ```
 
 
