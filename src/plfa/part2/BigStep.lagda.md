@@ -126,7 +126,12 @@ Show that `(ƛ ƛ # 1) · ((ƛ # 0 · # 0) · (ƛ # 0 · # 0))`
 terminates under big-step call-by-name evaluation.
 
 ```
--- Your code goes here
+big-step-eg : ∀ {Γ} {γ : ClosEnv Γ}
+  → Σ[ V ∈ Clos ] (γ ⊢ (ƛ ƛ # 1) · ((ƛ # 0 · # 0) · (ƛ # 0 · # 0)) ⇓ V)
+big-step-eg =
+  ⟨ clos (ƛ (` (S Z))) (_ ,' clos ((ƛ (` Z) · (` Z)) · (ƛ (` Z) · (` Z))) _)
+  , (⇓-app ⇓-lam ⇓-lam)
+  ⟩
 ```
 
 
@@ -297,7 +302,7 @@ below.
              (λ {x} → ≈ₑ-ext{σ = τ} δ≈ₑτ ⟨ σ , ⟨ γ≈ₑσ , refl ⟩ ⟩ {x})
            | β{∅}{subst (exts τ) N}{subst σ M}
 ...   | ⟨ N' , ⟨ —↠N' , V≈N' ⟩ ⟩ | ƛτN·σM—→
-        rewrite sub-sub{M = N}{σ₁ = exts τ}{σ₂ = subst-zero (subst σ M)} =
+        rewrite sym (sub-sub{M = N}{σ₁ = exts τ}{σ₂ = subst-zero (subst σ M)}) =
         let rs = (ƛ subst (exts τ) N) · subst σ M —→⟨ ƛτN·σM—→ ⟩ —↠N' in
         let g = —↠-trans (appL-cong σL—↠ƛτN) rs in
         ⟨ N' , ⟨ g , V≈N' ⟩ ⟩
@@ -380,7 +385,38 @@ substitution, as in `N [ M ]`, instead of extending the environment
 with `M`. Prove that `M ↓ N` implies `M —↠ N`.
 
 ```
--- Your code goes here
+open plfa.part2.Untyped using (_[_]; _—↠⟨_⟩_; appR-cong)
+
+infix 5 _↓_
+
+data _↓_ : ∀ {Γ} → Γ ⊢ ★ → Γ ⊢ ★ → Set where
+  ↓-var : ∀ {Γ} {x : Γ ∋ ★}
+    → ` x ↓ ` x
+
+  ↓-lam : ∀ {Γ} {M : Γ , ★ ⊢ ★}
+    → ƛ M ↓ ƛ M
+
+  ↓-app : ∀ {Γ} {L M O : Γ ⊢ ★} {N : Γ , ★ ⊢ ★} {V}
+    → L ↓ ƛ N
+    → M ↓ O
+    → N [ O ] ↓ V
+      ---------------------------------------------------
+    → L · M ↓ V
+
+big-alt-implies-multi : ∀ {Γ} {M N : Γ ⊢ ★} → M ↓ N → M —↠ N 
+big-alt-implies-multi ↓-var                  = _ ∎
+big-alt-implies-multi ↓-lam                  = _ ∎
+big-alt-implies-multi (↓-app L↓N M↓O N[O]↓V) =
+    _
+  —↠⟨ appL-cong (big-alt-implies-multi L↓N) ⟩
+    _
+  —↠⟨ appR-cong (big-alt-implies-multi M↓O) ⟩
+    _
+  —→⟨ β ⟩
+    _
+  —↠⟨ big-alt-implies-multi N[O]↓V ⟩
+    _
+  ∎
 ```
 
 ## Beta reduction to a lambda implies big-step evaluation
