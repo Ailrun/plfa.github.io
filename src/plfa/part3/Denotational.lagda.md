@@ -503,7 +503,12 @@ such that `∅ ⊢ plusᶜ ↓ v`. Also, give the proof of `∅ ⊢ plusᶜ ↓ 
 for your choice of `v`.
 
 ```
--- Your code goes here
+open plfa.part2.Untyped using (plusᶜ)
+
+denot-plusᶜ : ∀ {t u v w}
+  → `∅ ⊢ plusᶜ ↓ (t ↦ u ↦ w) ↦ (t ↦ v ↦ u) ↦ t ↦ v ↦ w
+denot-plusᶜ {t} {u} {v} {w} =
+  ↦-intro (↦-intro (↦-intro (↦-intro (↦-elim (↦-elim var var) (↦-elim (↦-elim var var) var)))))
 ```
 
 
@@ -876,7 +881,20 @@ Prove the following theorem.
        → `∅ ⊢ church n ↓ Dᶜ n ls
 
 ```
--- Your code goes here
+denot-apply-n : ∀ {n : ℕ} {ls : Vec Value n} {a : Value}
+  → `∅ `, D^suc n (a ∷ ls) `, vec-last (a ∷ ls) ⊢ apply-n n ↓ a
+denot-apply-n {zero}  {[]}     = var
+denot-apply-n {suc n} {x ∷ ls} =
+  ↦-elim (sub var (⊑-conj-R1 ⊑-refl)) (⊑-env denot-apply-n (extext-le (⊑-conj-R2 ⊑-refl)))
+  where
+    extext-le : ∀ {γ u₁ u₂ v} → u₁ ⊑ u₂ → (γ `, u₁ `, v) `⊑ (γ `, u₂ `, v)
+    extext-le lt Z = ⊑-refl
+    extext-le lt (S Z) = lt
+    extext-le lt (S (S n)) = ⊑-refl
+
+denot-church : ∀ {n : ℕ} {ls : Vec Value (suc n)}
+  → `∅ ⊢ church n ↓ Dᶜ n ls
+denot-church {n} {x ∷ ls} = ↦-intro (↦-intro denot-apply-n)
 ```
 
 
@@ -1012,7 +1030,7 @@ all-funs∈ {⊥} f with f {⊥} refl
 ... | fun ()
 all-funs∈ {v ↦ w} f = ⟨ v , ⟨ w , refl ⟩ ⟩
 all-funs∈ {u ⊔ u′} f
-    with all-funs∈ λ z → f (inj₁ z)
+    with all-funs∈ (λ z → f (inj₁ z))
 ... | ⟨ v , ⟨ w , m ⟩ ⟩ = ⟨ v , ⟨ w , (inj₁ m) ⟩ ⟩
 ```
 
