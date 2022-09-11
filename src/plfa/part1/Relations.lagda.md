@@ -934,19 +934,12 @@ to[2*n]≡[to[n]]O {suc n} z<s = helper n
     helper zero    = refl
     helper (suc n) rewrite +-suc n (suc (n + 0)) | helper n = refl
 
-*-monoʳ-< : ∀ (n p q : ℕ)
-  → p < q
-    ---------------
-  → suc n * p < suc n * q
-*-monoʳ-< zero    p q p<q rewrite +-identityʳ p | +-identityʳ q = p<q
-*-monoʳ-< (suc n) p q p<q = +-mono-< _ _ _ _ p<q (*-monoʳ-< n p q p<q)
-
 from-one-pos : ∀ {b : Bin}
   → One b
     ------------
   → 0 < from b
 from-one-pos ⟨⟩I   = z<s
-from-one-pos (o O) = *-monoʳ-< 1 0 _ (from-one-pos o)
+from-one-pos (o O) = +-mono-< _ _ _ _ (from-one-pos o) (+-monoˡ-< _ _ _ (from-one-pos o))
 from-one-pos (o I) = z<s
 
 one-to-from-inv : ∀ {b : Bin}
